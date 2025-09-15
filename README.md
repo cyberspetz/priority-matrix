@@ -4,16 +4,18 @@ A web application that helps you organize tasks using the Eisenhower Matrix (als
 
 Inspired by productivity tools like [Appfluence](https://appfluence.com/), this application provides a clean, modern interface for task prioritization using the proven Eisenhower method.
 
-![Priority Matrix Screenshot](https://via.placeholder.com/1200x800/f8fafc/1f2937?text=Priority+Matrix+-+Modern+Eisenhower+Task+Manager)
+![Priority Matrix Screenshot](./docs/screenshot.png)
 
 ## Features
 
-✅ **Four-Quadrant Matrix**: Organize tasks into Urgent/Important, Not Urgent/Important, Urgent/Not Important, and Not Urgent/Not Important
-✅ **Drag & Drop**: Seamlessly move tasks between quadrants
-✅ **Persistent Storage**: Tasks are saved to a Supabase database
-✅ **Responsive Design**: Works on desktop and mobile devices
-✅ **Real-time Updates**: Changes are immediately reflected in the database
-✅ **Modern UI**: Clean, professional interface built with Tailwind CSS
+✅ **Four-Quadrant Matrix**: Organize tasks into Do First, Schedule, Delegate, and Eliminate quadrants
+✅ **Drag & Drop**: Seamlessly move tasks between quadrants with smooth animations
+✅ **Task Management**: Create, complete, and delete tasks with real-time updates
+✅ **Supabase Integration**: Full database persistence with PostgreSQL backend
+✅ **Modern Glass Design**: Beautiful glassmorphism UI with gradient backgrounds
+✅ **Responsive Design**: Optimized for desktop and mobile devices
+✅ **Enhanced Schema**: Support for task descriptions, priorities, due dates, and user assignments
+✅ **Optimistic Updates**: Instant UI feedback with automatic error recovery
 
 ## Tech Stack
 
@@ -71,9 +73,20 @@ CREATE TABLE tasks (
     'not-urgent-not-important'
   )),
   is_completed BOOLEAN DEFAULT FALSE,
+  priority INTEGER DEFAULT 0,
+  due_date TIMESTAMP WITH TIME ZONE,
+  user_id UUID,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Create indexes for better performance
+CREATE INDEX idx_tasks_user_id ON tasks(user_id);
+CREATE INDEX idx_tasks_quadrant ON tasks(quadrant);
+
+-- Enable Row Level Security (optional)
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all operations on tasks" ON tasks FOR ALL USING (true);
 ```
 
 5. **Run the development server:**
@@ -85,14 +98,15 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 
 ## How to Use
 
-1. **Add a Task**: Click "Add New Task" and enter a task title
-2. **Move Tasks**: Drag and drop tasks between the four quadrants
-3. **Delete Tasks**: Click the 'X' button on any task card to delete it
-4. **Organize by Priority**:
-   - **Urgent & Important** (Do): Critical tasks that need immediate attention
-   - **Not Urgent & Important** (Schedule): Important tasks to plan for
-   - **Urgent & Not Important** (Delegate): Tasks that are pressing but not critical
-   - **Not Urgent & Not Important** (Eliminate): Low-priority tasks to minimize
+1. **Add a Task**: Click "Add Task" button and enter a task title
+2. **Move Tasks**: Drag and drop tasks between the four quadrants using the drag handle (⋮⋮)
+3. **Complete Tasks**: Click the checkbox to mark tasks as completed
+4. **Delete Tasks**: Click the delete button (🗑️) on any task card
+5. **Organize by Priority**:
+   - **Do First** (Urgent & Important): Critical tasks requiring immediate attention
+   - **Schedule** (Not Urgent & Important): Important tasks to plan and schedule
+   - **Delegate** (Urgent & Not Important): Tasks that are pressing but can be delegated
+   - **Eliminate** (Not Urgent & Not Important): Low-priority tasks to minimize or eliminate
 
 ## Project Structure
 
@@ -115,8 +129,8 @@ src/
 The application includes the following database operations:
 
 - `getAllTasks()` - Fetch all tasks from database
-- `createTask(title, quadrant, description?)` - Create a new task
-- `updateTask(id, updates)` - Update an existing task
+- `createTask(title, quadrant, description?, priority?, due_date?, user_id?)` - Create a new task
+- `updateTask(id, updates)` - Update an existing task (supports all fields)
 - `deleteTask(id)` - Delete a task
 
 ## Deployment

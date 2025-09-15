@@ -11,6 +11,9 @@ export interface Task {
   description?: string;
   quadrant: 'urgent-important' | 'not-urgent-important' | 'urgent-not-important' | 'not-urgent-not-important';
   is_completed: boolean;
+  priority: number;
+  due_date?: string;
+  user_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -34,7 +37,10 @@ export const getAllTasks = async (): Promise<Task[]> => {
 export const createTask = async (
   title: string,
   quadrant: Task['quadrant'] = 'urgent-important',
-  description?: string
+  description?: string,
+  priority: number = 0,
+  due_date?: string,
+  user_id?: string
 ): Promise<Task> => {
   const { data, error } = await supabase
     .from('tasks')
@@ -44,6 +50,9 @@ export const createTask = async (
         description,
         quadrant,
         is_completed: false,
+        priority,
+        due_date,
+        user_id,
       },
     ])
     .select()

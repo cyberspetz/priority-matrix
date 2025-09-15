@@ -1,106 +1,115 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent } from '@dnd-kit/core';
 import TaskCard from '@/components/TaskCard';
 import Quadrant from '@/components/Quadrant';
 import AddTaskModal from '@/components/AddTaskModal';
-
-interface MockTask {
-  id: string;
-  title: string;
-  quadrant: 'urgent-important' | 'not-urgent-important' | 'urgent-not-important' | 'not-urgent-not-important';
-  is_completed: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, Task } from '@/lib/supabaseClient';
 
 export default function Home() {
-  const [tasks, setTasks] = useState<MockTask[]>([
-    {
-      id: '1',
-      title: 'Fix critical bug in production',
-      quadrant: 'urgent-important',
-      is_completed: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      title: 'Plan next quarter strategy',
-      quadrant: 'not-urgent-important',
-      is_completed: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: '3',
-      title: 'Respond to urgent emails',
-      quadrant: 'urgent-not-important',
-      is_completed: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: '4',
-      title: 'Watch Netflix',
-      quadrant: 'not-urgent-not-important',
-      is_completed: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Load tasks from Supabase on component mount
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        setLoading(true);
+        const fetchedTasks = await getAllTasks();
+        setTasks(fetchedTasks);
+      } catch (error) {
+        console.error('Failed to load tasks:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTasks();
+  }, []);
 
   const getTasksByQuadrant = (quadrant: string) => {
     return tasks.filter(task => task.quadrant === quadrant);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (!over) return;
 
     const taskId = active.id as string;
-    const newQuadrant = over.id as MockTask['quadrant'];
+    const newQuadrant = over.id as Task['quadrant'];
 
     if (taskId && newQuadrant) {
-      setTasks(tasks =>
-        tasks.map(task =>
-          task.id === taskId
-            ? { ...task, quadrant: newQuadrant, updated_at: new Date().toISOString() }
-            : task
-        )
-      );
+      try {
+        // Optimistically update the UI
+        setTasks(tasks =>
+          tasks.map(task =>
+            task.id === taskId
+              ? { ...task, quadrant: newQuadrant }
+              : task
+          )
+        );
+
+        // Update in Supabase
+        await updateTask(taskId, { quadrant: newQuadrant });
+      } catch (error) {
+        console.error('Failed to update task:', error);
+        // Revert the optimistic update by refetching
+        const fetchedTasks = await getAllTasks();
+        setTasks(fetchedTasks);
+      }
     }
   };
 
-  const addTask = (title: string) => {
-    const newTask: MockTask = {
-      id: Date.now().toString(),
-      title,
-      quadrant: 'urgent-important',
-      is_completed: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    setTasks(prevTasks => [...prevTasks, newTask]);
+  const addTask = async (title: string) => {
+    try {
+      const newTask = await createTask(title, 'urgent-important');
+      setTasks(prevTasks => [...prevTasks, newTask]);
+    } catch (error) {
+      console.error('Failed to create task:', error);
+    }
   };
 
-  const deleteTask = (id: string) => {
-    setTasks(prevTasks => prevTasks.filter(task => task.id !== id));
+  const deleteTask = async (id: string) => {
+    try {
+      // Optimistically update the UI
+      setTasks(prevTasks => prevTasks.filter(task => task.id !== id));
+
+      // Delete from Supabase
+      await deleteTaskFromDB(id);
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      // Revert the optimistic update by refetching
+      const fetchedTasks = await getAllTasks();
+      setTasks(fetchedTasks);
+    }
   };
 
-  const toggleTaskComplete = (id: string) => {
-    setTasks(prevTasks =>
-      prevTasks.map(task =>
-        task.id === id
-          ? { ...task, is_completed: !task.is_completed, updated_at: new Date().toISOString() }
-          : task
-      )
-    );
-  };
+  const toggleTaskComplete = async (id: string) => {
+    try {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
 
+      // Optimistically update the UI
+      setTasks(prevTasks =>
+        prevTasks.map(task =>
+          task.id === id
+            ? { ...task, is_completed: !task.is_completed }
+            : task
+        )
+      );
+
+      // Update in Supabase
+      await updateTask(id, { is_completed: !task.is_completed });
+    } catch (error) {
+      console.error('Failed to toggle task completion:', error);
+      // Revert the optimistic update by refetching
+      const fetchedTasks = await getAllTasks();
+      setTasks(fetchedTasks);
+    }
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       <div className="max-w-7xl mx-auto p-6">
@@ -125,47 +134,52 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Matrix */}
-        <DndContext onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-2 gap-6 h-[calc(100vh-220px)]">
-            <Quadrant
-              id="urgent-important"
-              title="Do First"
-              description="Urgent & Important"
-              tasks={getTasksByQuadrant('urgent-important')}
-              accentColor="bg-red-500"
-              onDeleteTask={deleteTask}
-              onToggleComplete={toggleTaskComplete}
-            />
-            <Quadrant
-              id="not-urgent-important"
-              title="Schedule"
-              description="Not Urgent & Important"
-              tasks={getTasksByQuadrant('not-urgent-important')}
-              accentColor="bg-blue-500"
-              onDeleteTask={deleteTask}
-              onToggleComplete={toggleTaskComplete}
-            />
-            <Quadrant
-              id="urgent-not-important"
-              title="Delegate"
-              description="Urgent & Not Important"
-              tasks={getTasksByQuadrant('urgent-not-important')}
-              accentColor="bg-yellow-500"
-              onDeleteTask={deleteTask}
-              onToggleComplete={toggleTaskComplete}
-            />
-            <Quadrant
-              id="not-urgent-not-important"
-              title="Eliminate"
-              description="Not Urgent & Not Important"
-              tasks={getTasksByQuadrant('not-urgent-not-important')}
-              accentColor="bg-gray-500"
-              onDeleteTask={deleteTask}
-              onToggleComplete={toggleTaskComplete}
-            />
+        {loading ? (
+          <div className="flex justify-center items-center h-[calc(100vh-200px)]">
+            <div className="text-xl text-gray-600">Loading tasks...</div>
           </div>
-        </DndContext>
+        ) : (
+          <DndContext onDragEnd={handleDragEnd}>
+            <div className="grid grid-cols-2 gap-6 h-[calc(100vh-220px)]">
+              <Quadrant
+                id="urgent-important"
+                title="Do First"
+                description="Urgent & Important"
+                tasks={getTasksByQuadrant('urgent-important')}
+                accentColor="bg-red-500"
+                onDeleteTask={deleteTask}
+                onToggleComplete={toggleTaskComplete}
+              />
+              <Quadrant
+                id="not-urgent-important"
+                title="Schedule"
+                description="Not Urgent & Important"
+                tasks={getTasksByQuadrant('not-urgent-important')}
+                accentColor="bg-blue-500"
+                onDeleteTask={deleteTask}
+                onToggleComplete={toggleTaskComplete}
+              />
+              <Quadrant
+                id="urgent-not-important"
+                title="Delegate"
+                description="Urgent & Not Important"
+                tasks={getTasksByQuadrant('urgent-not-important')}
+                accentColor="bg-yellow-500"
+                onDeleteTask={deleteTask}
+                onToggleComplete={toggleTaskComplete}
+              />
+              <Quadrant
+                id="not-urgent-not-important"
+                title="Eliminate"
+                description="Not Urgent & Not Important"
+                tasks={getTasksByQuadrant('not-urgent-not-important')}
+                accentColor="bg-gray-500"
+                onDeleteTask={deleteTask}
+                onToggleComplete={toggleTaskComplete}
+              />
+            </div>
+          </DndContext>
+        )}
 
         <AddTaskModal
           isOpen={isModalOpen}
