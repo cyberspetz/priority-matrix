@@ -2,7 +2,9 @@
 
 A web application that helps you organize tasks using the Eisenhower Matrix (also known as the Eisenhower Decision Matrix), which categorizes tasks based on urgency and importance.
 
-![Priority Matrix Screenshot](https://via.placeholder.com/800x600/f3f4f6/374151?text=Priority+Matrix+Screenshot)
+Inspired by productivity tools like [Appfluence](https://appfluence.com/), this application provides a clean, modern interface for task prioritization using the proven Eisenhower method.
+
+![Priority Matrix Screenshot](https://via.placeholder.com/1200x800/f8fafc/1f2937?text=Priority+Matrix+-+Modern+Eisenhower+Task+Manager)
 
 ## Features
 
@@ -144,6 +146,7 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## Acknowledgments
 
+- **Design Inspiration**: [Appfluence](https://appfluence.com/) - A beautiful productivity platform that inspired the modern, clean UI design
 - Built with [Next.js](https://nextjs.org/)
 - Database powered by [Supabase](https://supabase.com/)
 - Drag and drop by [dnd kit](https://dndkit.com/)
