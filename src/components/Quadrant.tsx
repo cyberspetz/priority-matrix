@@ -1,6 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { useEffect, useState } from 'react';
 import TaskCard from './TaskCard';
+import QuadrantInfoDialog from './QuadrantInfoDialog';
 import { Task } from '@/lib/supabaseClient';
 
 interface QuadrantProps {
@@ -15,6 +16,7 @@ interface QuadrantProps {
 
 export default function Quadrant({ id, title, description, tasks, accentColor, onDeleteTask, onToggleComplete }: QuadrantProps) {
   const [mounted, setMounted] = useState(false);
+  const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
 
   const { isOver, setNodeRef } = useDroppable({
     id: id,
@@ -47,6 +49,13 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
             {title}
           </h2>
           <div className="flex-1"></div>
+          <button
+            onClick={() => setIsInfoDialogOpen(true)}
+            className="w-5 h-5 rounded-full bg-gray-200/80 hover:bg-gray-300/80 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-all duration-200 text-xs font-medium"
+            title="Learn more about this quadrant"
+          >
+            ?
+          </button>
           <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
             {tasks.length}
           </span>
@@ -82,6 +91,15 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
           ))
         )}
       </div>
+
+      {/* Info Dialog */}
+      <QuadrantInfoDialog
+        isOpen={isInfoDialogOpen}
+        onClose={() => setIsInfoDialogOpen(false)}
+        quadrantId={id}
+        title={title}
+        description={description}
+      />
     </div>
   );
 }
