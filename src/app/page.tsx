@@ -1,16 +1,49 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DndContext, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, DragMoveEvent } from '@dnd-kit/core';
 import TaskCard from '@/components/TaskCard';
 import Quadrant from '@/components/Quadrant';
 import AddTaskModal from '@/components/AddTaskModal';
+import FluidBackground from '@/components/FluidBackground';
 import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, Task } from '@/lib/supabaseClient';
+
+interface FluidConfig {
+  intensity: number;
+  colorIntensity: number;
+  splatRadius: number;
+  forceMultiplier: number;
+  velocityDissipation: number;
+  densityDissipation: number;
+  curl: number;
+  colorful: boolean;
+  baseColorR: number;
+  baseColorG: number;
+  baseColorB: number;
+}
 
 export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [dragData, setDragData] = useState<{ isDragging: boolean; position?: { x: number; y: number } }>({
+    isDragging: false
+  });
+
+  // Fluid effect configuration with enhanced default settings
+  const [fluidConfig, setFluidConfig] = useState<FluidConfig>({
+    intensity: 1.5,
+    colorIntensity: 2.0,
+    splatRadius: 0.3,
+    forceMultiplier: 18000,
+    velocityDissipation: 0.08,
+    densityDissipation: 0.6,
+    curl: 60,
+    colorful: true,
+    baseColorR: 0.5,
+    baseColorG: 0.3,
+    baseColorB: 0.8
+  });
 
   // Load tasks from Supabase on component mount
   useEffect(() => {
@@ -33,7 +66,17 @@ export default function Home() {
     return tasks.filter(task => task.quadrant === quadrant);
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setDragData({ isDragging: true });
+  };
+
+  const handleDragMove = (event: DragMoveEvent) => {
+    setDragData({ isDragging: true });
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
+    setDragData({ isDragging: false });
+
     const { active, over } = event;
 
     if (!over) return;
@@ -112,6 +155,8 @@ export default function Home() {
   };
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
+      {/* Mouse-Interactive Fluid Background */}
+      <FluidBackground dragData={dragData} config={fluidConfig} />
       <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -139,7 +184,7 @@ export default function Home() {
             <div className="text-xl text-gray-600">Loading tasks...</div>
           </div>
         ) : (
-          <DndContext onDragEnd={handleDragEnd}>
+          <DndContext onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd}>
             <div className="grid grid-cols-2 gap-6 h-[calc(100vh-220px)]">
               <Quadrant
                 id="urgent-important"
