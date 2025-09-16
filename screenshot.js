@@ -9,8 +9,8 @@ async function takeScreenshot() {
   await page.setViewportSize({ width: 1200, height: 800 });
 
   try {
-    console.log('Navigating to localhost:3000...');
-    await page.goto('http://localhost:3000', { waitUntil: 'networkidle' });
+    console.log('Navigating to localhost:3001...');
+    await page.goto('http://localhost:3001', { waitUntil: 'networkidle' });
 
     console.log('Waiting for content to load...');
     await page.waitForSelector('.grid.grid-cols-2', { timeout: 10000 });
