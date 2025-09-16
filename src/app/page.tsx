@@ -6,7 +6,8 @@ import TaskCard from '@/components/TaskCard';
 import Quadrant from '@/components/Quadrant';
 import AddTaskModal from '@/components/AddTaskModal';
 import FluidBackground from '@/components/FluidBackground';
-import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, Task } from '@/lib/supabaseClient';
+import ReportsSidebar from '@/components/ReportsSidebar';
+import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, completeTask, uncompleteTask, archiveCompletedTasks, Task } from '@/lib/supabaseClient';
 
 interface FluidConfig {
   intensity: number;
@@ -25,6 +26,7 @@ interface FluidConfig {
 export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dragData, setDragData] = useState<{ isDragging: boolean; position?: { x: number; y: number } }>({
     isDragging: false
@@ -136,21 +138,42 @@ export default function Home() {
       if (!task) return;
 
       // Optimistically update the UI
+      const isCompleting = !task.is_completed;
       setTasks(prevTasks =>
         prevTasks.map(task =>
           task.id === id
-            ? { ...task, is_completed: !task.is_completed }
+            ? {
+                ...task,
+                is_completed: isCompleting,
+                status: isCompleting ? 'completed' : 'active',
+                completed_at: isCompleting ? new Date().toISOString() : undefined
+              }
             : task
         )
       );
 
-      // Update in Supabase
-      await updateTask(id, { is_completed: !task.is_completed });
+      // Update in Supabase using the new functions
+      if (isCompleting) {
+        await completeTask(id);
+      } else {
+        await uncompleteTask(id);
+      }
     } catch (error) {
       console.error('Failed to toggle task completion:', error);
       // Revert the optimistic update by refetching
       const fetchedTasks = await getAllTasks();
       setTasks(fetchedTasks);
+    }
+  };
+
+  const handleArchiveCompleted = async () => {
+    try {
+      await archiveCompletedTasks();
+      // Refresh tasks list
+      const fetchedTasks = await getAllTasks();
+      setTasks(fetchedTasks);
+    } catch (error) {
+      console.error('Failed to archive completed tasks:', error);
     }
   };
   return (
@@ -168,15 +191,27 @@ export default function Home() {
               Organize your tasks using the Eisenhower Decision Matrix
             </p>
           </div>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Add Task
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsReportsOpen(true)}
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium px-4 py-2.5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Reports
+            </button>
+
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add Task
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -231,6 +266,22 @@ export default function Home() {
           onClose={() => setIsModalOpen(false)}
           onAddTask={addTask}
         />
+
+        <ReportsSidebar
+          isOpen={isReportsOpen}
+          onClose={() => setIsReportsOpen(false)}
+        />
+
+        {/* Elegant Floating Toggle Button - Shows when sidebar is closed */}
+        {!isReportsOpen && (
+          <button
+            onClick={() => setIsReportsOpen(true)}
+            className="fixed right-0 top-1/2 -translate-y-1/2 translate-x-3 w-6 h-16 bg-gradient-to-l from-gray-100/80 to-white/90 backdrop-blur-sm border-y border-r border-gray-200/40 rounded-r-xl shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center group hover:from-gray-200/80 hover:to-white z-40"
+            title="Show Reports"
+          >
+            <div className="w-1 h-8 bg-gradient-to-b from-gray-300 to-gray-400 rounded-full group-hover:from-gray-400 group-hover:to-gray-500 transition-all duration-300"></div>
+          </button>
+        )}
       </div>
     </div>
   );
