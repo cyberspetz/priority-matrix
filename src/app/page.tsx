@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, DragMoveEvent } from '@dnd-kit/core';
-import TaskCard from '@/components/TaskCard';
+// import TaskCard from '@/components/TaskCard';
 import Quadrant from '@/components/Quadrant';
 import AddTaskModal from '@/components/AddTaskModal';
 import FluidBackground from '@/components/FluidBackground';
@@ -34,7 +34,7 @@ export default function Home() {
   });
 
   // Fluid effect configuration with enhanced default settings
-  const [fluidConfig, setFluidConfig] = useState<FluidConfig>({
+  const [fluidConfig] = useState<FluidConfig>({
     intensity: 1.5,
     colorIntensity: 2.0,
     splatRadius: 0.3,
@@ -73,7 +73,7 @@ export default function Home() {
     setDragData({ isDragging: true });
   };
 
-  const handleDragMove = (event: DragMoveEvent) => {
+  const handleDragMove = () => {
     setDragData({ isDragging: true });
   };
 
@@ -211,16 +211,16 @@ export default function Home() {
     }
   };
 
-  const handleArchiveCompleted = async () => {
-    try {
-      await archiveCompletedTasks();
-      // Refresh tasks list
-      const fetchedTasks = await getAllTasks();
-      setTasks(fetchedTasks);
-    } catch (error) {
-      console.error('Failed to archive completed tasks:', error);
-    }
-  };
+  // const handleArchiveCompleted = async () => {
+  //   try {
+  //     await archiveCompletedTasks();
+  //     // Refresh tasks list
+  //     const fetchedTasks = await getAllTasks();
+  //     setTasks(fetchedTasks);
+  //   } catch (error) {
+  //     console.error('Failed to archive completed tasks:', error);
+  //   }
+  // };
   return (
     <PasswordProtection>
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">

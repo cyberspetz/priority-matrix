@@ -41,7 +41,7 @@ export default function FluidBackground({ dragData, config: userConfig }: FluidB
 
   const fluidConfig = { ...defaultConfig, ...userConfig };
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | null>(null);
   const splatFunctionRef = useRef<((x: number, y: number, dx: number, dy: number, color: any) => void) | null>(null);
   const HSVtoRGBRef = useRef<((h: number, s: number, v: number) => any) | null>(null);
   const simulationDataRef = useRef({

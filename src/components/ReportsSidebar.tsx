@@ -6,8 +6,7 @@ import {
   getOverdueTasks,
   getTasksByStatus,
   supabase,
-  Task,
-  TaskStatus
+  Task
 } from '@/lib/supabaseClient';
 
 interface ReportsSidebarProps {
@@ -393,7 +392,7 @@ Generated on ${formatDate(currentDate)}
               {activeView === 'today' && todayStats && (
                 <div className="space-y-4">
                   <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">Today's Summary</h3>
+                    <h3 className="font-semibold text-gray-900 mb-3">Today&apos;s Summary</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="text-center">
                         <div className="text-2xl font-bold text-green-600">{todayStats.completed}</div>
