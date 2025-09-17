@@ -184,7 +184,7 @@ export default function ReportsSidebar({ isOpen, onClose }: ReportsSidebarProps)
   if (!isOpen) return null;
 
   return (
-    <div className="fixed right-0 top-0 h-full w-[30%] bg-white/95 backdrop-blur-sm border-l border-gray-200/50 shadow-2xl z-40 overflow-hidden">
+    <div className="fixed right-0 top-0 h-full w-[30%] bg-gray-100/95 backdrop-blur-sm border-l border-gray-300/60 shadow-2xl z-40 overflow-hidden">
       {/* Elegant Toggle Button - Minimalist design */}
       <button
         onClick={onClose}
@@ -203,7 +203,10 @@ export default function ReportsSidebar({ isOpen, onClose }: ReportsSidebarProps)
             {/* Menu Button */}
             <div className="relative">
               <button
-                onClick={() => setShowMenu(!showMenu)}
+                onClick={() => {
+                  console.log('Menu button clicked, showMenu was:', showMenu);
+                  setShowMenu(!showMenu);
+                }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative"
                 title="More options"
               >
@@ -214,7 +217,7 @@ export default function ReportsSidebar({ isOpen, onClose }: ReportsSidebarProps)
 
               {/* Dropdown Menu */}
               {showMenu && (
-                <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                <div className="absolute right-0 top-full mt-1 w-48 bg-gray-100/98 backdrop-blur-sm rounded-lg shadow-xl border border-gray-300 py-1 z-[60]">
                   <button
                     onClick={() => {
                       handleArchiveCompleted();
@@ -261,7 +264,7 @@ export default function ReportsSidebar({ isOpen, onClose }: ReportsSidebarProps)
           </div>
 
           {/* View Tabs */}
-          <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex space-x-1 bg-gray-200/70 rounded-lg p-1">
             {([
               { id: 'today', label: '📅 Today' },
               { id: 'week', label: '📈 Week' },
@@ -272,7 +275,7 @@ export default function ReportsSidebar({ isOpen, onClose }: ReportsSidebarProps)
                 onClick={() => setActiveView(tab.id)}
                 className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                   activeView === tab.id
-                    ? 'bg-white text-blue-600 shadow-sm'
+                    ? 'bg-gray-50/90 text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
