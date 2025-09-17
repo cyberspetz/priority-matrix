@@ -7,6 +7,7 @@ import Quadrant from '@/components/Quadrant';
 import AddTaskModal from '@/components/AddTaskModal';
 import FluidBackground from '@/components/FluidBackground';
 import ReportsSidebar from '@/components/ReportsSidebar';
+import PasswordProtection from '@/components/PasswordProtection';
 import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, completeTask, uncompleteTask, archiveCompletedTasks, archiveTask, Task } from '@/lib/supabaseClient';
 
 interface FluidConfig {
@@ -221,6 +222,7 @@ export default function Home() {
     }
   };
   return (
+    <PasswordProtection>
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       {/* Mouse-Interactive Fluid Background */}
       <FluidBackground dragData={dragData} config={fluidConfig} />
@@ -342,5 +344,6 @@ export default function Home() {
         )}
       </div>
     </div>
+    </PasswordProtection>
   );
 }
