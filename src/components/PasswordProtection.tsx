@@ -29,7 +29,7 @@ export default function PasswordProtection({ children }: PasswordProtectionProps
     e.preventDefault();
 
     // Set your password here
-    const correctPassword = process.env.NEXT_PUBLIC_APP_PASSWORD || 'your-secret-password';
+    const correctPassword = process.env.NEXT_PUBLIC_APP_PASSWORD || 'demo-password';
 
     if (password === correctPassword) {
       setIsAuthenticated(true);
