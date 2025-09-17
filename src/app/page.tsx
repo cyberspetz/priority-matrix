@@ -7,7 +7,7 @@ import Quadrant from '@/components/Quadrant';
 import AddTaskModal from '@/components/AddTaskModal';
 import FluidBackground from '@/components/FluidBackground';
 import ReportsSidebar from '@/components/ReportsSidebar';
-import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, completeTask, uncompleteTask, archiveCompletedTasks, Task } from '@/lib/supabaseClient';
+import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, completeTask, uncompleteTask, archiveCompletedTasks, archiveTask, Task } from '@/lib/supabaseClient';
 
 interface FluidConfig {
   intensity: number;
@@ -108,9 +108,9 @@ export default function Home() {
     }
   };
 
-  const addTask = async (title: string) => {
+  const addTask = async (title: string, dueDate?: string) => {
     try {
-      const newTask = await createTask(title, 'urgent-important');
+      const newTask = await createTask(title, 'urgent-important', undefined, dueDate);
       setTasks(prevTasks => [...prevTasks, newTask]);
     } catch (error) {
       console.error('Failed to create task:', error);
@@ -119,13 +119,34 @@ export default function Home() {
 
   const deleteTask = async (id: string) => {
     try {
+      const task = tasks.find(t => t.id === id);
+      if (!task) {
+        console.log('Task not found:', id);
+        return;
+      }
+
+      console.log('Delete task clicked:', {
+        id,
+        title: task.title,
+        is_completed: task.is_completed,
+        status: task.status
+      });
+
       // Optimistically update the UI
       setTasks(prevTasks => prevTasks.filter(task => task.id !== id));
 
-      // Delete from Supabase
-      await deleteTaskFromDB(id);
+      // Archive completed tasks, delete active tasks
+      if (task.is_completed) {
+        console.log('Archiving completed task:', id);
+        await archiveTask(id);
+        console.log('Task archived successfully:', id);
+      } else {
+        console.log('Deleting active task:', id);
+        await deleteTaskFromDB(id);
+        console.log('Task deleted successfully:', id);
+      }
     } catch (error) {
-      console.error('Failed to delete task:', error);
+      console.error('Failed to delete/archive task:', error);
       // Revert the optimistic update by refetching
       const fetchedTasks = await getAllTasks();
       setTasks(fetchedTasks);
@@ -160,6 +181,29 @@ export default function Home() {
       }
     } catch (error) {
       console.error('Failed to toggle task completion:', error);
+      // Revert the optimistic update by refetching
+      const fetchedTasks = await getAllTasks();
+      setTasks(fetchedTasks);
+    }
+  };
+
+  const editTask = async (id: string, newTitle: string) => {
+    try {
+      if (!newTitle.trim()) return;
+
+      // Optimistically update the UI
+      setTasks(prevTasks =>
+        prevTasks.map(task =>
+          task.id === id
+            ? { ...task, title: newTitle.trim() }
+            : task
+        )
+      );
+
+      // Update in Supabase
+      await updateTask(id, { title: newTitle.trim() });
+    } catch (error) {
+      console.error('Failed to edit task:', error);
       // Revert the optimistic update by refetching
       const fetchedTasks = await getAllTasks();
       setTasks(fetchedTasks);
@@ -229,6 +273,7 @@ export default function Home() {
                 accentColor="bg-red-500"
                 onDeleteTask={deleteTask}
                 onToggleComplete={toggleTaskComplete}
+                onEditTask={editTask}
               />
               <Quadrant
                 id="not-urgent-important"
@@ -238,6 +283,7 @@ export default function Home() {
                 accentColor="bg-blue-500"
                 onDeleteTask={deleteTask}
                 onToggleComplete={toggleTaskComplete}
+                onEditTask={editTask}
               />
               <Quadrant
                 id="urgent-not-important"
@@ -247,6 +293,7 @@ export default function Home() {
                 accentColor="bg-yellow-500"
                 onDeleteTask={deleteTask}
                 onToggleComplete={toggleTaskComplete}
+                onEditTask={editTask}
               />
               <Quadrant
                 id="not-urgent-not-important"
@@ -256,6 +303,7 @@ export default function Home() {
                 accentColor="bg-gray-500"
                 onDeleteTask={deleteTask}
                 onToggleComplete={toggleTaskComplete}
+                onEditTask={editTask}
               />
             </div>
           </DndContext>
@@ -272,14 +320,24 @@ export default function Home() {
           onClose={() => setIsReportsOpen(false)}
         />
 
-        {/* Elegant Floating Toggle Button - Shows when sidebar is closed */}
+        {/* Premium Floating Toggle Button - Shows when sidebar is closed */}
         {!isReportsOpen && (
           <button
             onClick={() => setIsReportsOpen(true)}
-            className="fixed right-0 top-1/2 -translate-y-1/2 translate-x-3 w-6 h-16 bg-gradient-to-l from-gray-100/80 to-white/90 backdrop-blur-sm border-y border-r border-gray-200/40 rounded-r-xl shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center group hover:from-gray-200/80 hover:to-white z-40"
+            className="fixed right-0 top-1/2 -translate-y-1/2 translate-x-3 w-10 h-10 bg-gradient-to-bl from-slate-800/90 via-slate-700/90 to-slate-900/90 backdrop-blur-lg border border-white/10 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group hover:from-slate-700/95 hover:via-slate-600/95 hover:to-slate-800/95 z-40"
             title="Show Reports"
           >
-            <div className="w-1 h-8 bg-gradient-to-b from-gray-300 to-gray-400 rounded-full group-hover:from-gray-400 group-hover:to-gray-500 transition-all duration-300"></div>
+            <div className="relative">
+              <svg
+                className="w-3 h-3 text-white/70 group-hover:text-white transition-colors duration-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+              </svg>
+              <div className="absolute inset-0 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </div>
           </button>
         )}
       </div>

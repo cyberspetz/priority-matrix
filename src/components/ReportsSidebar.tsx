@@ -5,7 +5,7 @@ import {
   getCompletedTasks,
   getOverdueTasks,
   getTasksByStatus,
-  archiveCompletedTasks,
+  supabase,
   Task,
   TaskStatus
 } from '@/lib/supabaseClient';
@@ -140,12 +140,99 @@ export default function ReportsSidebar({ isOpen, onClose }: ReportsSidebarProps)
     setOverdueTasks(overdue);
   };
 
-  const handleArchiveCompleted = async () => {
+  const generateWeeklySummary = async () => {
+    if (!weeklyReport) return;
+
     try {
-      await archiveCompletedTasks();
-      loadReportData(); // Refresh data
+      // Get all tasks completed during the week (including archived ones)
+      const weekStartDate = new Date(weeklyReport.weekStart);
+      const weekEndDate = new Date(weekStartDate);
+      weekEndDate.setDate(weekStartDate.getDate() + 7);
+
+      // Query for tasks that were completed during this week (both completed and archived status)
+      const { data: completedTasks, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .in('status', ['completed', 'archived'])
+        .gte('completed_at', weekStartDate.toISOString().split('T')[0])
+        .lte('completed_at', weekEndDate.toISOString().split('T')[0])
+        .order('completed_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching completed tasks:', error);
+        throw error;
+      }
+
+      // Group tasks by quadrant
+      const tasks = completedTasks || [];
+      const tasksByQuadrant = {
+        'urgent-important': tasks.filter(t => t.quadrant === 'urgent-important'),
+        'not-urgent-important': tasks.filter(t => t.quadrant === 'not-urgent-important'),
+        'urgent-not-important': tasks.filter(t => t.quadrant === 'urgent-not-important'),
+        'not-urgent-not-important': tasks.filter(t => t.quadrant === 'not-urgent-not-important')
+      };
+
+      const quadrantLabels = {
+        'urgent-important': '🔥 DO FIRST (Urgent & Important)',
+        'not-urgent-important': '📅 SCHEDULE (Not Urgent & Important)',
+        'urgent-not-important': '🤝 DELEGATE (Urgent & Not Important)',
+        'not-urgent-not-important': '🗑️ ELIMINATE (Not Urgent & Not Important)'
+      };
+
+      const currentDate = new Date();
+      const formatDate = (date: Date) => date.toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+      });
+
+      const summary = `
+🗓️ WEEKLY PRODUCTIVITY REPORT
+${formatDate(weekStartDate)} - ${formatDate(weekEndDate)}
+
+📊 KEY METRICS
+• Tasks Completed: ${weeklyReport.totalCompleted}
+• Tasks Created: ${weeklyReport.totalCreated}
+• Productivity Score: ${Math.round(weeklyReport.productivityScore)}%
+• Completion Rate: ${weeklyReport.totalCreated > 0 ? Math.round((weeklyReport.totalCompleted / weeklyReport.totalCreated) * 100) : 0}%
+
+📈 DAILY BREAKDOWN
+${weeklyReport.days.map(day => {
+  const dayName = new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' });
+  return `${dayName}: ✅ ${day.completed} completed, ➕ ${day.created} created`;
+}).join('\n')}
+
+📋 COMPLETED TASKS BY PRIORITY
+${Object.entries(tasksByQuadrant).map(([quadrant, tasks]) => {
+  if (tasks.length === 0) return '';
+  return `\n${quadrantLabels[quadrant as keyof typeof quadrantLabels]} (${tasks.length})\n${tasks.map(task => `• ${task.title}`).join('\n')}`;
+}).filter(section => section).join('\n')}
+
+🎯 PERFORMANCE INSIGHTS
+${weeklyReport.productivityScore >= 80 ? '🌟 Excellent productivity week!' :
+  weeklyReport.productivityScore >= 60 ? '✅ Good productivity week!' :
+  weeklyReport.productivityScore >= 40 ? '📈 Room for improvement' :
+  '🔄 Focus needed for next week'}
+
+${overdueTasks.length > 0 ? `⚠️ OVERDUE ITEMS: ${overdueTasks.length} tasks need attention\n${overdueTasks.slice(0, 5).map(task => `• ${task.title}`).join('\n')}${overdueTasks.length > 5 ? `\n...and ${overdueTasks.length - 5} more` : ''}` : '✨ No overdue tasks - great job!'}
+
+Generated on ${formatDate(currentDate)}
+      `.trim();
+
+      // Copy to clipboard
+      navigator.clipboard.writeText(summary).then(() => {
+        alert('Weekly summary with completed tasks copied to clipboard! Ready to share with your manager.');
+      }).catch(() => {
+        // Fallback: Download as text file
+        const blob = new Blob([summary], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `weekly-summary-${weeklyReport.weekStart}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
     } catch (error) {
-      console.error('Error archiving completed tasks:', error);
+      console.error('Error generating weekly summary:', error);
+      alert('Error generating summary. Please try again.');
     }
   };
 
@@ -185,13 +272,23 @@ export default function ReportsSidebar({ isOpen, onClose }: ReportsSidebarProps)
 
   return (
     <div className="fixed right-0 top-0 h-full w-[30%] bg-gray-100/95 backdrop-blur-sm border-l border-gray-300/60 shadow-2xl z-40 overflow-hidden">
-      {/* Elegant Toggle Button - Minimalist design */}
+      {/* Premium Toggle Button - Inspired by high-end design */}
       <button
         onClick={onClose}
-        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 w-6 h-16 bg-gradient-to-r from-gray-100/80 to-white/90 backdrop-blur-sm border-y border-l border-gray-200/40 rounded-l-xl shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center group hover:from-gray-200/80 hover:to-white z-50"
+        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 w-10 h-10 bg-gradient-to-br from-slate-800/90 via-slate-700/90 to-slate-900/90 backdrop-blur-lg border border-white/10 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group hover:from-slate-700/95 hover:via-slate-600/95 hover:to-slate-800/95 z-50"
         title="Hide Reports"
       >
-        <div className="w-1 h-8 bg-gradient-to-b from-gray-300 to-gray-400 rounded-full group-hover:from-gray-400 group-hover:to-gray-500 transition-all duration-300"></div>
+        <div className="relative">
+          <svg
+            className="w-3 h-3 text-white/70 group-hover:text-white transition-colors duration-300"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+          </svg>
+          <div className="absolute inset-0 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        </div>
       </button>
 
       <div className="h-full flex flex-col">
@@ -207,10 +304,10 @@ export default function ReportsSidebar({ isOpen, onClose }: ReportsSidebarProps)
                   console.log('Menu button clicked, showMenu was:', showMenu);
                   setShowMenu(!showMenu);
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative"
+                className="p-2 hover:bg-white/60 bg-gray-200/40 rounded-lg transition-colors relative border border-gray-300/50"
                 title="More options"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                 </svg>
               </button>
@@ -220,15 +317,15 @@ export default function ReportsSidebar({ isOpen, onClose }: ReportsSidebarProps)
                 <div className="absolute right-0 top-full mt-1 w-48 bg-gray-100/98 backdrop-blur-sm rounded-lg shadow-xl border border-gray-300 py-1 z-[60]">
                   <button
                     onClick={() => {
-                      handleArchiveCompleted();
+                      generateWeeklySummary();
                       setShowMenu(false);
                     }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8l6 6 6-6" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Archive Completed Tasks
+                    Weekly Summary
                   </button>
 
                   <button

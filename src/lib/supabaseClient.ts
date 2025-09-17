@@ -29,7 +29,6 @@ export interface Task {
   is_completed: boolean; // Keep for backward compatibility
 
   // Priority and scheduling
-  priority: number; // Keep for backward compatibility
   priority_level: TaskPriority;
   due_date?: string;
 
@@ -134,7 +133,6 @@ export const createTask = async (
   title: string,
   quadrant: Task['quadrant'] = 'urgent-important',
   description?: string,
-  priority: number = 0,
   due_date?: string,
   user_id?: string,
   priority_level: TaskPriority = 'p3',
@@ -151,7 +149,6 @@ export const createTask = async (
         quadrant,
         status: 'active',
         is_completed: false,
-        priority,
         priority_level,
         due_date,
         time_estimate,

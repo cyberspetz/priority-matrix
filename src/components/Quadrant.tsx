@@ -12,9 +12,10 @@ interface QuadrantProps {
   accentColor: string;
   onDeleteTask?: (id: string) => void;
   onToggleComplete?: (id: string) => void;
+  onEditTask?: (id: string, newTitle: string) => void;
 }
 
-export default function Quadrant({ id, title, description, tasks, accentColor, onDeleteTask, onToggleComplete }: QuadrantProps) {
+export default function Quadrant({ id, title, description, tasks, accentColor, onDeleteTask, onToggleComplete, onEditTask }: QuadrantProps) {
   const [mounted, setMounted] = useState(false);
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
 
@@ -85,8 +86,10 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
               id={task.id}
               title={task.title}
               isCompleted={task.is_completed}
+              dueDate={task.due_date}
               onDelete={onDeleteTask}
               onToggleComplete={onToggleComplete}
+              onEdit={onEditTask}
             />
           ))
         )}
