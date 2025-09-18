@@ -4,21 +4,25 @@ import { Dialog, Transition } from '@headlessui/react';
 interface AddTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddTask: (title: string, dueDate?: string) => void;
+  onAddTask: (title: string, dueDate?: string, deadlineAt?: string) => void;
 }
 
 export default function AddTaskModal({ isOpen, onClose, onAddTask }: AddTaskModalProps) {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [deadlineAt, setDeadlineAt] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim()) {
-      onAddTask(title.trim(), dueDate || undefined);
+      onAddTask(title.trim(), dueDate || undefined, deadlineAt || undefined);
       setTitle('');
       setDueDate('');
+      setDeadlineAt('');
       setShowDatePicker(false);
+      setShowDeadlinePicker(false);
       onClose();
     }
   };
@@ -26,7 +30,9 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask }: AddTaskModa
   const handleClose = () => {
     setTitle('');
     setDueDate('');
+    setDeadlineAt('');
     setShowDatePicker(false);
+    setShowDeadlinePicker(false);
     onClose();
   };
 
@@ -176,6 +182,55 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask }: AddTaskModa
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                           <span className="text-gray-700">Due: {formatDueDate(dueDate)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Deadline Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-gray-700">Deadline</label>
+                        {deadlineAt && (
+                          <button
+                            type="button"
+                            onClick={() => setDeadlineAt('')}
+                            className="text-xs text-gray-500 hover:text-red-500 transition-colors"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setShowDeadlinePicker(!showDeadlinePicker)}
+                          className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+                        >
+                          ⏰ Pick deadline
+                        </button>
+                      </div>
+
+                      {showDeadlinePicker && (
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <input
+                            type="datetime-local"
+                            value={deadlineAt}
+                            onChange={(e) => {
+                              setDeadlineAt(e.target.value);
+                              setShowDeadlinePicker(false);
+                            }}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                          />
+                        </div>
+                      )}
+
+                      {deadlineAt && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3" />
+                          </svg>
+                          <span className="text-gray-700">Deadline: {new Date(deadlineAt).toLocaleString()}</span>
                         </div>
                       )}
                     </div>

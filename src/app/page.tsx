@@ -8,6 +8,8 @@ import Quadrant from '@/components/Quadrant';
 import AddTaskModal from '@/components/AddTaskModal';
 import FluidBackground from '@/components/FluidBackground';
 import ReportsSidebar from '@/components/ReportsSidebar';
+import SidebarNav from '@/components/SidebarNav';
+import TaskListItem from '@/components/TaskListItem';
 import PasswordProtection from '@/components/PasswordProtection';
 import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, completeTask, uncompleteTask, archiveCompletedTasks, archiveTask, Task } from '@/lib/supabaseClient';
 
@@ -29,6 +31,8 @@ export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeView, setActiveView] = useState<'inbox' | 'today' | 'upcoming'>('inbox');
   const [loading, setLoading] = useState(true);
   const [dragData, setDragData] = useState<{ isDragging: boolean; position?: { x: number; y: number } }>({
     isDragging: false
@@ -70,6 +74,30 @@ export default function Home() {
     return tasks
       .filter(task => task.quadrant === quadrant)
       .sort((a, b) => (a.sort_index ?? 0) - (b.sort_index ?? 0));
+  };
+
+  // Derived views
+  const localDateString = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const todayStr = localDateString(new Date());
+  const tomorrow = new Date();
+  tomorrow.setDate(new Date().getDate() + 1);
+  const tomorrowStr = localDateString(tomorrow);
+
+  const isActive = (t: Task) => t.status !== 'archived';
+
+  const todayTasks = tasks.filter(t => isActive(t) && ((t.due_date && t.due_date.startsWith(todayStr)) || (t.created_at?.startsWith?.(todayStr))));
+  const upcomingTasks = tasks.filter(t => isActive(t) && t.due_date && (t.due_date >= todayStr));
+
+  const counts = {
+    inbox: tasks.filter(isActive).length,
+    today: todayTasks.length,
+    upcoming: upcomingTasks.filter(t => t.due_date && t.due_date > todayStr).length,
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -172,9 +200,9 @@ export default function Home() {
     }
   };
 
-  const addTask = async (title: string, dueDate?: string) => {
+  const addTask = async (title: string, dueDate?: string, deadlineAt?: string) => {
     try {
-      const newTask = await createTask(title, 'urgent-important', undefined, dueDate);
+      const newTask = await createTask(title, 'urgent-important', undefined, dueDate, undefined, undefined, undefined, undefined, undefined, deadlineAt);
       setTasks(prevTasks => [...prevTasks, newTask]);
     } catch (error) {
       console.error('Failed to create task:', error);
@@ -290,8 +318,16 @@ export default function Home() {
       {/* Mouse-Interactive Fluid Background */}
       <FluidBackground dragData={dragData} config={fluidConfig} />
       <div className="max-w-7xl mx-auto p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        {/* Sidebar toggle */}
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          className="fixed left-4 top-4 z-50 p-2 rounded-lg bg-white/90 border border-gray-200 shadow md:left-6 md:top-6"
+          title="Open menu"
+        >
+          <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        {/* Header (hidden on mobile to maximize space) */}
+        <div className="hidden md:flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Priority Matrix
@@ -328,50 +364,112 @@ export default function Home() {
             <div className="text-xl text-gray-600">Loading tasks...</div>
           </div>
         ) : (
-          <DndContext onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd}>
-            <div className="grid grid-cols-2 gap-6 h-[calc(100vh-220px)]">
-              <Quadrant
-                id="urgent-important"
-                title="Do First"
-                description="Urgent & Important"
-                tasks={getTasksByQuadrant('urgent-important')}
-                accentColor="bg-red-500"
-                onDeleteTask={deleteTask}
-                onToggleComplete={toggleTaskComplete}
-                onEditTask={editTask}
-              />
-              <Quadrant
-                id="not-urgent-important"
-                title="Schedule"
-                description="Not Urgent & Important"
-                tasks={getTasksByQuadrant('not-urgent-important')}
-                accentColor="bg-blue-500"
-                onDeleteTask={deleteTask}
-                onToggleComplete={toggleTaskComplete}
-                onEditTask={editTask}
-              />
-              <Quadrant
-                id="urgent-not-important"
-                title="Delegate"
-                description="Urgent & Not Important"
-                tasks={getTasksByQuadrant('urgent-not-important')}
-                accentColor="bg-yellow-500"
-                onDeleteTask={deleteTask}
-                onToggleComplete={toggleTaskComplete}
-                onEditTask={editTask}
-              />
-              <Quadrant
-                id="not-urgent-not-important"
-                title="Eliminate"
-                description="Not Urgent & Not Important"
-                tasks={getTasksByQuadrant('not-urgent-not-important')}
-                accentColor="bg-gray-500"
-                onDeleteTask={deleteTask}
-                onToggleComplete={toggleTaskComplete}
-                onEditTask={editTask}
-              />
+          activeView === 'inbox' ? (
+            <DndContext onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 md:h-[calc(100vh-220px)]">
+                <Quadrant
+                  id="urgent-important"
+                  title="Do First"
+                  description="Urgent & Important"
+                  tasks={getTasksByQuadrant('urgent-important')}
+                  accentColor="bg-emerald-500"
+                  onDeleteTask={deleteTask}
+                  onToggleComplete={toggleTaskComplete}
+                  onEditTask={editTask}
+                />
+                <Quadrant
+                  id="not-urgent-important"
+                  title="Schedule"
+                  description="Not Urgent & Important"
+                  tasks={getTasksByQuadrant('not-urgent-important')}
+                  accentColor="bg-sky-500"
+                  onDeleteTask={deleteTask}
+                  onToggleComplete={toggleTaskComplete}
+                  onEditTask={editTask}
+                />
+                <Quadrant
+                  id="urgent-not-important"
+                  title="Delegate"
+                  description="Urgent & Not Important"
+                  tasks={getTasksByQuadrant('urgent-not-important')}
+                  accentColor="bg-amber-500"
+                  onDeleteTask={deleteTask}
+                  onToggleComplete={toggleTaskComplete}
+                  onEditTask={editTask}
+                />
+                <Quadrant
+                  id="not-urgent-not-important"
+                  title="Eliminate"
+                  description="Not Urgent & Not Important"
+                  tasks={getTasksByQuadrant('not-urgent-not-important')}
+                  accentColor="bg-slate-500"
+                  onDeleteTask={deleteTask}
+                  onToggleComplete={toggleTaskComplete}
+                  onEditTask={editTask}
+                />
+              </div>
+            </DndContext>
+          ) : activeView === 'today' ? (
+            <div className="space-y-3">
+              {todayTasks.length === 0 && <div className="text-sm text-gray-500">No tasks for today.</div>}
+              {todayTasks.map(t => (
+                <TaskListItem
+                  key={t.id}
+                  id={t.id}
+                  title={t.title}
+                  quadrant={t.quadrant}
+                  dueDate={t.due_date}
+                  deadlineAt={t.deadline_at}
+                  isCompleted={t.is_completed}
+                  onToggleComplete={toggleTaskComplete}
+                  onDelete={deleteTask}
+                  onEdit={editTask}
+                />
+              ))}
             </div>
-          </DndContext>
+          ) : (
+            <div className="space-y-6">
+              {/* Upcoming: groups */}
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-2">Today</div>
+                <div className="space-y-3">
+                  {tasks.filter(t => isActive(t) && t.due_date?.startsWith(todayStr)).map(t => (
+                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-2">Tomorrow</div>
+                <div className="space-y-3">
+                  {tasks.filter(t => isActive(t) && t.due_date === tomorrowStr).map(t => (
+                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-2">Next 7 days</div>
+                <div className="space-y-3">
+                  {tasks.filter(t => {
+                    if (!isActive(t) || !t.due_date) return false;
+                    return t.due_date > tomorrowStr && (new Date(t.due_date) <= new Date(new Date().setDate(new Date().getDate() + 7)));
+                  }).map(t => (
+                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-2">Later</div>
+                <div className="space-y-3">
+                  {tasks.filter(t => {
+                    if (!isActive(t) || !t.due_date) return false;
+                    return new Date(t.due_date) > new Date(new Date().setDate(new Date().getDate() + 7));
+                  }).map(t => (
+                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )
         )}
 
         <AddTaskModal
@@ -385,11 +483,11 @@ export default function Home() {
           onClose={() => setIsReportsOpen(false)}
         />
 
-        {/* Premium Floating Toggle Button - Shows when sidebar is closed */}
+        {/* Premium Floating Toggle Button - hidden on mobile */}
         {!isReportsOpen && (
           <button
             onClick={() => setIsReportsOpen(true)}
-            className="fixed right-0 top-1/2 -translate-y-1/2 translate-x-3 w-10 h-10 bg-gradient-to-bl from-slate-800/90 via-slate-700/90 to-slate-900/90 backdrop-blur-lg border border-white/10 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group hover:from-slate-700/95 hover:via-slate-600/95 hover:to-slate-800/95 z-40"
+            className="hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 translate-x-3 w-10 h-10 bg-gradient-to-bl from-slate-800/90 via-slate-700/90 to-slate-900/90 backdrop-blur-lg border border-white/10 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 items-center justify-center group hover:from-slate-700/95 hover:via-slate-600/95 hover:to-slate-800/95 z-40"
             title="Show Reports"
           >
             <div className="relative">
@@ -406,6 +504,13 @@ export default function Home() {
           </button>
         )}
       </div>
+      <SidebarNav
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onAddTask={() => setIsModalOpen(true)}
+        onSelect={(view) => setActiveView(view)}
+        counts={counts}
+      />
     </div>
     </PasswordProtection>
   );

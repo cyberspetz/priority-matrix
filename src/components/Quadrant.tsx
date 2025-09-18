@@ -29,7 +29,7 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
   }, []);
 
   const getQuadrantStyles = () => {
-    const baseStyles = "bg-white/70 backdrop-blur-sm border border-gray-200/50 rounded-2xl p-6 flex flex-col transition-all duration-300";
+    const baseStyles = "bg-white/70 backdrop-blur-sm border border-gray-200/50 rounded-2xl p-3 md:p-6 flex flex-col transition-all duration-300";
 
     if (mounted && isOver) {
       return `${baseStyles} ring-2 ring-blue-400/50 shadow-xl scale-[1.02] bg-blue-50/30`;
@@ -44,16 +44,16 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
       className={getQuadrantStyles()}
     >
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
+      <div className="mb-4 md:mb-6">
+        <div className="flex items-center gap-3 mb-1 md:mb-2">
           <div className={`w-3 h-3 rounded-full ${accentColor}`}></div>
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-base md:text-lg font-semibold text-gray-900">
             {title}
           </h2>
           <div className="flex-1"></div>
           <button
             onClick={() => setIsInfoDialogOpen(true)}
-            className="w-5 h-5 rounded-full bg-gray-200/80 hover:bg-gray-300/80 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-all duration-200 text-xs font-medium"
+            className="hidden md:flex w-5 h-5 rounded-full bg-gray-200/80 hover:bg-gray-300/80 items-center justify-center text-gray-600 hover:text-gray-800 transition-all duration-200 text-xs font-medium"
             title="Learn more about this quadrant"
           >
             ?
@@ -62,13 +62,13 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
             {tasks.length}
           </span>
         </div>
-        <p className="text-sm text-gray-600 ml-6">
+        <p className="hidden md:block text-sm text-gray-600 ml-6">
           {description}
         </p>
       </div>
 
       {/* Tasks (Sortable) */}
-      <div className="flex-1 space-y-3 min-h-[200px]">
+      <div className="flex-1 space-y-3 min-h-[160px] md:min-h-[200px]">
         <SortableContext id={id} items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.length === 0 ? (
             <div className="flex items-center justify-center h-32">

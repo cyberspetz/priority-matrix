@@ -62,6 +62,8 @@ export interface Task {
   due_date?: string;
   // Manual ordering within a quadrant
   sort_index?: number;
+  // Optional hard deadline distinct from due_date
+  deadline_at?: string;
 
   // Time tracking
   time_estimate?: number; // in minutes
@@ -170,7 +172,8 @@ export const createTask = async (
   priority_level: TaskPriority = 'p3',
   time_estimate?: number,
   tags?: string[],
-  notes?: string
+  notes?: string,
+  deadline_at?: string
 ): Promise<Task> => {
   // Determine next sort_index within the quadrant
   let nextIndex = 0;
@@ -198,6 +201,7 @@ export const createTask = async (
         is_completed: false,
         priority_level,
         due_date,
+        deadline_at,
         sort_index: nextIndex,
         time_estimate,
         tags,

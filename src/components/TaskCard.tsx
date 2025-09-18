@@ -77,16 +77,16 @@ export default function TaskCard({ id, title, isCompleted, dueDate, onDelete, on
     const diffDays = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) {
-      return { text: `${Math.abs(diffDays)}d overdue`, color: 'text-red-600', bgColor: 'bg-red-50', urgent: true };
+      return { text: `${Math.abs(diffDays)}d overdue`, color: 'text-rose-700', bgColor: 'bg-rose-50', urgent: true };
     } else if (diffDays === 0) {
-      return { text: 'Today', color: 'text-orange-600', bgColor: 'bg-orange-50', urgent: true };
+      return { text: 'Today', color: 'text-emerald-700', bgColor: 'bg-emerald-50', urgent: true };
     } else if (diffDays === 1) {
-      return { text: 'Tomorrow', color: 'text-blue-600', bgColor: 'bg-blue-50', urgent: false };
+      return { text: 'Tomorrow', color: 'text-amber-700', bgColor: 'bg-amber-50', urgent: false };
     } else if (diffDays <= 7) {
       const dayName = due.toLocaleDateString('en-US', { weekday: 'short' });
-      return { text: dayName, color: 'text-gray-600', bgColor: 'bg-gray-50', urgent: false };
+      return { text: dayName, color: 'text-violet-700', bgColor: 'bg-violet-50', urgent: false };
     } else {
-      return { text: due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), color: 'text-gray-500', bgColor: 'bg-gray-50', urgent: false };
+      return { text: due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), color: 'text-violet-700', bgColor: 'bg-violet-50', urgent: false };
     }
   };
 

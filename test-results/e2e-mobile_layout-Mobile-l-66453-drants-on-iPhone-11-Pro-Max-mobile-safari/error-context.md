@@ -1,0 +1,117 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - button "Open menu" [ref=e5]:
+          - img [ref=e6]
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - generic [ref=e11]:
+              - heading "Do First" [level=2] [ref=e13]
+              - generic [ref=e14]: "4"
+            - generic [ref=e15]:
+              - 'button "Black-box Rollout: Stats collection and Present on POSTUP" [ref=e16]':
+                - generic [ref=e17]:
+                  - button [ref=e18]:
+                    - img [ref=e20]
+                  - paragraph [ref=e24] [cursor=pointer]: "Black-box Rollout: Stats collection and Present on POSTUP"
+                  - button "Archive task" [ref=e25]:
+                    - img [ref=e26]
+              - 'button "GVL: Service Desk Setup" [ref=e28]':
+                - generic [ref=e29]:
+                  - button [ref=e30]:
+                    - img [ref=e32]
+                  - paragraph [ref=e36] [cursor=pointer]: "GVL: Service Desk Setup"
+                  - button "Archive task" [ref=e37]:
+                    - img [ref=e38]
+              - button "Add OKRs to BPM for each member Today" [ref=e40]:
+                - generic [ref=e41]:
+                  - button [ref=e42]
+                  - generic [ref=e45]:
+                    - paragraph [ref=e46] [cursor=pointer]: Add OKRs to BPM for each member
+                    - generic [ref=e47]:
+                      - img [ref=e48]
+                      - text: Today
+                  - button "Delete task" [ref=e50]:
+                    - img [ref=e51]
+              - button "Reporting for Black Box Rollout - HIRE PERSON TO KEEP IT RUNNING Tomorrow" [ref=e53]:
+                - generic [ref=e54]:
+                  - button [ref=e55]
+                  - generic [ref=e58]:
+                    - paragraph [ref=e59] [cursor=pointer]: Reporting for Black Box Rollout - HIRE PERSON TO KEEP IT RUNNING
+                    - generic [ref=e60]:
+                      - img [ref=e61]
+                      - text: Tomorrow
+                  - button "Delete task" [ref=e63]:
+                    - img [ref=e64]
+          - generic [ref=e66]:
+            - generic [ref=e68]:
+              - heading "Schedule" [level=2] [ref=e70]
+              - generic [ref=e71]: "3"
+            - generic [ref=e72]:
+              - button "Lead | AI Engineering Pods -> Delivery Idiation" [ref=e73]:
+                - generic [ref=e74]:
+                  - button [ref=e75]
+                  - paragraph [ref=e79] [cursor=pointer]: Lead | AI Engineering Pods -> Delivery Idiation
+                  - button "Delete task" [ref=e80]:
+                    - img [ref=e81]
+              - button "Review the state of AI report 2025" [ref=e83]:
+                - generic [ref=e84]:
+                  - button [ref=e85]
+                  - paragraph [ref=e89] [cursor=pointer]: Review the state of AI report 2025
+                  - button "Delete task" [ref=e90]:
+                    - img [ref=e91]
+              - 'button "GenAI: Inditex learnings" [ref=e93]':
+                - generic [ref=e94]:
+                  - button [ref=e95]
+                  - paragraph [ref=e99] [cursor=pointer]: "GenAI: Inditex learnings"
+                  - button "Delete task" [ref=e100]:
+                    - img [ref=e101]
+          - generic [ref=e103]:
+            - generic [ref=e105]:
+              - heading "Delegate" [level=2] [ref=e107]
+              - generic [ref=e108]: "0"
+            - generic [ref=e111]:
+              - img [ref=e113]
+              - paragraph [ref=e115]: Drop tasks here
+          - generic [ref=e116]:
+            - generic [ref=e118]:
+              - heading "Eliminate" [level=2] [ref=e120]
+              - generic [ref=e121]: "0"
+            - generic [ref=e124]:
+              - img [ref=e126]
+              - paragraph [ref=e128]: Drop tasks here
+        - status [ref=e129]
+      - complementary [ref=e130]:
+        - generic [ref=e131]:
+          - generic [ref=e134]: Menu
+          - button [ref=e135]:
+            - img [ref=e136]
+        - generic [ref=e138]:
+          - button "Add task" [ref=e139]:
+            - img [ref=e140]
+            - text: Add task
+          - generic [ref=e142]:
+            - button "Inbox 7" [ref=e143]:
+              - generic [ref=e144]:
+                - img [ref=e145]
+                - generic [ref=e147]: Inbox
+              - generic [ref=e148]: "7"
+            - button "Today 4" [ref=e149]:
+              - generic [ref=e150]:
+                - img [ref=e151]
+                - generic [ref=e153]: Today
+              - generic [ref=e154]: "4"
+            - button "Upcoming 2" [ref=e155]:
+              - generic [ref=e156]:
+                - img [ref=e157]
+                - generic [ref=e159]: Upcoming
+              - generic [ref=e160]: "2"
+    - button "Logout" [ref=e161]
+  - button "Open Next.js Dev Tools" [ref=e167] [cursor=pointer]:
+    - img [ref=e168] [cursor=pointer]
+  - alert [ref=e173]
+```
