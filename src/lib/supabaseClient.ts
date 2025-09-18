@@ -34,6 +34,8 @@ export const supabase = createClient(supabaseUrl || '', supabaseKey || '', {
   },
 });
 
+const DEMO = process.env.NEXT_PUBLIC_DEMO === '1';
+
 export type TaskStatus =
   | 'active'      // Currently working on
   | 'completed'   // Done
@@ -85,13 +87,16 @@ export interface Task {
 
 // Get all active tasks (non-archived)
 export const getAllTasks = async (): Promise<Task[]> => {
+  if (DEMO) {
+    return memTasks.filter(t => t.status !== 'archived').sort(sorter);
+  }
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
     .neq('status', 'archived')
     .order('sort_index', { ascending: true })
     .order('priority_level', { ascending: true })
-    .order('due_date', { ascending: true, nullsLast: true })
+    .order('due_date', { ascending: true })
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -104,6 +109,9 @@ export const getAllTasks = async (): Promise<Task[]> => {
 
 // Get tasks by status
 export const getTasksByStatus = async (status: TaskStatus): Promise<Task[]> => {
+  if (DEMO) {
+    return memTasks.filter(t => t.status === status).sort((a,b)=> (b.created_at> a.created_at?1:-1));
+  }
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
@@ -120,6 +128,12 @@ export const getTasksByStatus = async (status: TaskStatus): Promise<Task[]> => {
 
 // Get completed tasks for reporting
 export const getCompletedTasks = async (startDate?: string, endDate?: string): Promise<Task[]> => {
+  if (DEMO) {
+    let data = memTasks.filter(t => t.status === 'completed');
+    if (startDate) data = data.filter(t => t.completed_at && t.completed_at >= startDate);
+    if (endDate) data = data.filter(t => t.completed_at && t.completed_at <= endDate);
+    return data.sort((a,b)=> (b.completed_at! > a.completed_at! ? -1:1));
+  }
   let query = supabase
     .from('tasks')
     .select('*')
@@ -146,6 +160,9 @@ export const getCompletedTasks = async (startDate?: string, endDate?: string): P
 // Get overdue tasks
 export const getOverdueTasks = async (): Promise<Task[]> => {
   const today = new Date().toISOString().split('T')[0];
+  if (DEMO) {
+    return memTasks.filter(t => t.status === 'active' && t.due_date && t.due_date < today);
+  }
 
   const { data, error } = await supabase
     .from('tasks')
@@ -175,6 +192,31 @@ export const createTask = async (
   notes?: string,
   deadline_at?: string
 ): Promise<Task> => {
+  if (DEMO) {
+    const now = new Date().toISOString();
+    const nextIndex = Math.max(-1, ...memTasks.filter(t=> t.quadrant===quadrant).map(t=> t.sort_index ?? 0)) + 1;
+    const t: Task = {
+      id: `demo_${Math.random().toString(36).slice(2)}`,
+      title,
+      description,
+      quadrant,
+      status: 'active',
+      is_completed: false,
+      priority_level,
+      due_date,
+      deadline_at,
+      sort_index: nextIndex,
+      time_estimate,
+      actual_time: undefined,
+      tags,
+      notes,
+      user_id,
+      created_at: now,
+      updated_at: now,
+    };
+    memTasks.push(t);
+    return t;
+  }
   // Determine next sort_index within the quadrant
   let nextIndex = 0;
   try {
@@ -225,6 +267,12 @@ export const updateTask = async (
   id: string,
   updates: Partial<Omit<Task, 'id' | 'created_at' | 'updated_at'>>
 ): Promise<Task> => {
+  if (DEMO) {
+    const idx = memTasks.findIndex(t => t.id === id);
+    if (idx === -1) throw new Error('Not found');
+    memTasks[idx] = { ...memTasks[idx], ...updates, updated_at: new Date().toISOString() } as Task;
+    return memTasks[idx];
+  }
   const { data, error } = await supabase
     .from('tasks')
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -242,6 +290,10 @@ export const updateTask = async (
 
 // Delete a task
 export const deleteTask = async (id: string): Promise<void> => {
+  if (DEMO) {
+    memTasks = memTasks.filter(t => t.id !== id);
+    return;
+  }
   const { error } = await supabase
     .from('tasks')
     .delete()
@@ -255,6 +307,9 @@ export const deleteTask = async (id: string): Promise<void> => {
 
 // Archive a task
 export const archiveTask = async (id: string): Promise<Task> => {
+  if (DEMO) {
+    return updateTask(id, { status: 'archived', archived_at: new Date().toISOString() } as any);
+  }
   const { data, error } = await supabase
     .from('tasks')
     .update({
@@ -276,6 +331,9 @@ export const archiveTask = async (id: string): Promise<Task> => {
 
 // Complete a task
 export const completeTask = async (id: string, actual_time?: number): Promise<Task> => {
+  if (DEMO) {
+    return updateTask(id, { status: 'completed', is_completed: true, completed_at: new Date().toISOString(), actual_time } as any);
+  }
   const { data, error } = await supabase
     .from('tasks')
     .update({
@@ -299,6 +357,9 @@ export const completeTask = async (id: string, actual_time?: number): Promise<Ta
 
 // Uncomplete a task
 export const uncompleteTask = async (id: string): Promise<Task> => {
+  if (DEMO) {
+    return updateTask(id, { status: 'active', is_completed: false, completed_at: null } as any);
+  }
   const { data, error } = await supabase
     .from('tasks')
     .update({
@@ -321,6 +382,10 @@ export const uncompleteTask = async (id: string): Promise<Task> => {
 
 // Bulk archive completed tasks
 export const archiveCompletedTasks = async (): Promise<Task[]> => {
+  if (DEMO) {
+    memTasks = memTasks.map(t => t.status==='completed' ? { ...t, status:'archived', archived_at: new Date().toISOString() } as Task : t);
+    return memTasks.filter(t => t.status==='archived');
+  }
   const { data, error } = await supabase
     .from('tasks')
     .update({
@@ -337,4 +402,16 @@ export const archiveCompletedTasks = async (): Promise<Task[]> => {
   }
 
   return data || [];
+};
+
+// In-memory data for demo mode
+let memTasks: Task[] = [];
+const sorter = (a: Task, b: Task) => {
+  const ai = a.sort_index ?? 0;
+  const bi = b.sort_index ?? 0;
+  if (ai !== bi) return ai - bi;
+  const ad = a.due_date ?? '';
+  const bd = b.due_date ?? '';
+  if (ad !== bd) return ad.localeCompare(bd);
+  return a.created_at.localeCompare(b.created_at);
 };

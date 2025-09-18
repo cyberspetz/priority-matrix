@@ -1,47 +1,32 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Source: `src/app` (routes: `page.tsx`, `layout.tsx`, `globals.css`), `src/components` (UI), `src/lib` (`supabaseClient.ts`).
-- Assets: `public/` (static), `docs/` (docs, screenshots).
-- Database SQL: organized under `db/`:
-  - `db/migrations/` (Flyway versioned migrations)
-  - `db/policies/` (RLS policies)
-  - `db/maintenance/` (one-offs)
-  - See `db/README.md` for order.
-- Path alias: import via `@/*` for anything under `src/`.
+- Source under `src/app` with route files `page.tsx`, `layout.tsx`, `globals.css`; UI components live in `src/components` (PascalCase); shared utilities and Supabase client code stay in `src/lib`.
+- Assets: static files in `public/`, docs & captures in `docs/`, database artifacts in `db/` (`migrations/`, `policies/`, `maintenance/`). Follow execution order outlined in `db/README.md` when applying SQL.
+- Tests: Playwright specs reside in `tests/e2e/*.spec.ts`. Use the `@/...` path alias across the codebase.
 
 ## Build, Test, and Development Commands
-- `npm run dev`: Start Next.js dev server (Turbopack) on 3000.
-- `npm run build`: Production build.
-- `npm start`: Serve production build.
-- `npm run lint`: Lint with ESLint (Next core-web-vitals).
-- `npm run migrate`: Apply DB migrations via Flyway (Docker).
-- `npm run migrate:info`: Show migration status.
-
-## CI Migrations
-- Workflow: `.github/workflows/db-migrate.yml` (manual dispatch)
-- Add environment-scoped secrets (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SCHEMA`).
-- First-time setup: `cp .env.local.example .env.local` and fill Supabase vars.
+- `npm run dev`: start the Next.js dev server (Turbopack) on port 3000.
+- `npm run build`: generate the production bundle; run before merging significant changes.
+- `npm start`: serve the production build locally.
+- `npm run lint`: execute ESLint with Next.js core-web-vitals; resolve findings before PRs.
+- `npm run migrate` / `npm run migrate:info`: apply or inspect Flyway migrations via Docker.
+- `npx playwright install` / `npx playwright test`: set up and run the Playwright E2E suite.
 
 ## Coding Style & Naming Conventions
-- TypeScript, strict mode; 2-space indentation.
-- Components: PascalCase files in `src/components` (e.g., `TaskCard.tsx`); functions/hooks camelCase (`useX`).
-- Imports: prefer `@/...` alias instead of relative paths.
-- Tailwind v4 utilities for styling; keep class names readable and grouped logically.
-- Fix all lint errors locally before opening PRs.
+- TypeScript in strict mode with 2-space indentation; prefer Tailwind v4 utility classes grouped logically.
+- Components in `src/components` use PascalCase filenames, hooks stay camelCase (`useSupabaseClient`), and route files follow Next.js defaults.
+- Prefer `@/...` imports over relative paths. Keep comments purposeful and minimal.
 
 ## Testing Guidelines
-- E2E: Playwright is available. Place specs in `tests/e2e/*.spec.ts`.
-- Run: `npx playwright install` then `npx playwright test`.
-- Screenshots: `node screenshot.js` (expects app on `http://localhost:3001`).
-- Aim to cover core flows: create, drag, update, complete, archive tasks.
+- Place E2E specs in `tests/e2e/` with descriptive names (e.g., `tasks-flow.spec.ts`) covering create, drag, update, complete, and archive flows.
+- Run `npx playwright test` before PRs; capture screenshots via `node screenshot.js` when debugging UI (requires app on `http://localhost:3001`).
+- Document flaky or skipped tests in PR notes and schedule follow-up fixes.
 
 ## Commit & Pull Request Guidelines
-- Commits: short, imperative, and scoped (e.g., “Fix quadrant info dialog”, “Enhance reports sidebar UI”).
-- PRs: include summary, linked issues, test steps, and UI screenshots; note any SQL or env changes.
-- Ensure `npm run lint` and `npm run build` pass. Do not commit `.env.local`.
+- Commits: short, imperative, and scoped (e.g., “Enhance reports sidebar UI”); mention DB or env changes in the body.
+- PRs: include a summary, linked issues, test results, and relevant UI screenshots; note SQL or configuration updates and confirm `npm run lint && npm run build`.
 
 ## Security & Configuration Tips
-- Required env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`; optional `NEXT_PUBLIC_APP_PASSWORD` for production guard.
-- Never commit secrets; use `.env.example` as reference.
-- Enable/verify Supabase RLS in production (`enable_rls.sql`).
+- Required env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`; optional `NEXT_PUBLIC_APP_PASSWORD` guards production access.
+- Never commit secrets; rely on `.env.example`. Keep Supabase RLS enabled via policies in `db/policies/` and scripts like `enable_rls.sql`.

@@ -11,6 +11,7 @@ interface TaskListItemProps {
   onToggleComplete?: (id: string) => void;
   onDelete?: (id: string) => void;
   onEdit?: (id: string, newTitle: string) => void;
+  onUpdate?: (id: string, updates: any) => void;
 }
 
 const quadrantAccent: Record<TaskListItemProps['quadrant'], string> = {
@@ -35,12 +36,15 @@ function dueChip(due?: string) {
   return { text: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), classes: 'text-violet-700 bg-violet-50' };
 }
 
-export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt, isCompleted, onToggleComplete, onDelete, onEdit }: TaskListItemProps) {
+import QuickScheduleMenu from './QuickScheduleMenu';
+import TaskActionMenu from './TaskActionMenu';
+
+export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt, isCompleted, onToggleComplete, onDelete, onEdit, onUpdate }: TaskListItemProps) {
   const due = dueChip(dueDate);
   const isDeadlineOver = deadlineAt ? new Date(deadlineAt) < new Date() : false;
 
   return (
-    <div className={`flex items-center gap-3 p-3 bg-white rounded-lg border ${quadrantAccent[quadrant]} border-l-4`}> 
+    <div id={`task-${id}`} className={`flex items-center gap-3 p-3 bg-white rounded-lg border ${quadrantAccent[quadrant]} border-l-4`}> 
       <button
         onClick={() => onToggleComplete?.(id)}
         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isCompleted ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 hover:border-emerald-400'}`}
@@ -64,11 +68,11 @@ export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt,
       </div>
 
       <div className="flex items-center gap-1">
-        <button onClick={() => onDelete?.(id)} className="p-1 rounded hover:bg-red-50 text-gray-500 hover:text-red-600" aria-label="Delete">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
+        {onUpdate && (
+          <QuickScheduleMenu id={id} dueDate={dueDate} deadlineAt={deadlineAt} onUpdate={onUpdate} />
+        )}
+        {onDelete && (<TaskActionMenu id={id} title={title} onDelete={onDelete} />)}
       </div>
     </div>
   );
 }
-

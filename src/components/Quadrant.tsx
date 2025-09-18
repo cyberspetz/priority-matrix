@@ -14,9 +14,10 @@ interface QuadrantProps {
   onDeleteTask?: (id: string) => void;
   onToggleComplete?: (id: string) => void;
   onEditTask?: (id: string, newTitle: string) => void;
+  onUpdateTask?: (id: string, updates: Partial<Task>) => void;
 }
 
-export default function Quadrant({ id, title, description, tasks, accentColor, onDeleteTask, onToggleComplete, onEditTask }: QuadrantProps) {
+export default function Quadrant({ id, title, description, tasks, accentColor, onDeleteTask, onToggleComplete, onEditTask, onUpdateTask }: QuadrantProps) {
   const [mounted, setMounted] = useState(false);
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
 
@@ -29,7 +30,7 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
   }, []);
 
   const getQuadrantStyles = () => {
-    const baseStyles = "bg-white/70 backdrop-blur-sm border border-gray-200/50 rounded-2xl p-3 md:p-6 flex flex-col transition-all duration-300";
+    const baseStyles = "bg-white/70 backdrop-blur-sm border border-gray-200/50 rounded-2xl p-3 md:p-6 flex flex-col transition-all duration-300 overflow-visible";
 
     if (mounted && isOver) {
       return `${baseStyles} ring-2 ring-blue-400/50 shadow-xl scale-[1.02] bg-blue-50/30`;
@@ -89,9 +90,11 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
                 title={task.title}
                 isCompleted={task.is_completed}
                 dueDate={task.due_date}
+                deadlineAt={task.deadline_at}
                 onDelete={onDeleteTask}
                 onToggleComplete={onToggleComplete}
                 onEdit={onEditTask}
+                onUpdate={(taskId, updates) => onUpdateTask?.(taskId, updates)}
               />
             ))
           )}

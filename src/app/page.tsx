@@ -302,6 +302,17 @@ export default function Home() {
     }
   };
 
+  const updateTaskFields = async (id: string, updates: Partial<Task>) => {
+    try {
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+      await updateTask(id, updates as any);
+    } catch (error) {
+      console.error('Failed to update task fields:', error);
+      const fetched = await getAllTasks();
+      setTasks(fetched);
+    }
+  };
+
   // const handleArchiveCompleted = async () => {
   //   try {
   //     await archiveCompletedTasks();
@@ -376,6 +387,7 @@ export default function Home() {
                   onDeleteTask={deleteTask}
                   onToggleComplete={toggleTaskComplete}
                   onEditTask={editTask}
+                  onUpdateTask={updateTaskFields}
                 />
                 <Quadrant
                   id="not-urgent-important"
@@ -386,6 +398,7 @@ export default function Home() {
                   onDeleteTask={deleteTask}
                   onToggleComplete={toggleTaskComplete}
                   onEditTask={editTask}
+                  onUpdateTask={updateTaskFields}
                 />
                 <Quadrant
                   id="urgent-not-important"
@@ -396,6 +409,7 @@ export default function Home() {
                   onDeleteTask={deleteTask}
                   onToggleComplete={toggleTaskComplete}
                   onEditTask={editTask}
+                  onUpdateTask={updateTaskFields}
                 />
                 <Quadrant
                   id="not-urgent-not-important"
@@ -406,6 +420,7 @@ export default function Home() {
                   onDeleteTask={deleteTask}
                   onToggleComplete={toggleTaskComplete}
                   onEditTask={editTask}
+                  onUpdateTask={updateTaskFields}
                 />
               </div>
             </DndContext>
@@ -424,6 +439,7 @@ export default function Home() {
                   onToggleComplete={toggleTaskComplete}
                   onDelete={deleteTask}
                   onEdit={editTask}
+                  onUpdate={updateTaskFields}
                 />
               ))}
             </div>
@@ -434,7 +450,7 @@ export default function Home() {
                 <div className="text-xs font-semibold text-slate-600 mb-2">Today</div>
                 <div className="space-y-3">
                   {tasks.filter(t => isActive(t) && t.due_date?.startsWith(todayStr)).map(t => (
-                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} />
+                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} onUpdate={updateTaskFields} />
                   ))}
                 </div>
               </div>
@@ -442,7 +458,7 @@ export default function Home() {
                 <div className="text-xs font-semibold text-slate-600 mb-2">Tomorrow</div>
                 <div className="space-y-3">
                   {tasks.filter(t => isActive(t) && t.due_date === tomorrowStr).map(t => (
-                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} />
+                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} onUpdate={updateTaskFields} />
                   ))}
                 </div>
               </div>
@@ -453,7 +469,7 @@ export default function Home() {
                     if (!isActive(t) || !t.due_date) return false;
                     return t.due_date > tomorrowStr && (new Date(t.due_date) <= new Date(new Date().setDate(new Date().getDate() + 7)));
                   }).map(t => (
-                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} />
+                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} onUpdate={updateTaskFields} />
                   ))}
                 </div>
               </div>
@@ -464,7 +480,7 @@ export default function Home() {
                     if (!isActive(t) || !t.due_date) return false;
                     return new Date(t.due_date) > new Date(new Date().setDate(new Date().getDate() + 7));
                   }).map(t => (
-                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} />
+                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} onUpdate={updateTaskFields} />
                   ))}
                 </div>
               </div>

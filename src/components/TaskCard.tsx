@@ -1,5 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import QuickScheduleMenu from './QuickScheduleMenu';
+import TaskActionMenu from './TaskActionMenu';
 import { useEffect, useState } from 'react';
 
 interface TaskCardProps {
@@ -7,12 +9,14 @@ interface TaskCardProps {
   title: string;
   isCompleted: boolean;
   dueDate?: string;
+  deadlineAt?: string;
   onDelete?: (id: string) => void;
   onToggleComplete?: (id: string) => void;
   onEdit?: (id: string, newTitle: string) => void;
+  onUpdate?: (id: string, updates: any) => void;
 }
 
-export default function TaskCard({ id, title, isCompleted, dueDate, onDelete, onToggleComplete, onEdit }: TaskCardProps) {
+export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, onDelete, onToggleComplete, onEdit, onUpdate }: TaskCardProps) {
   const [mounted, setMounted] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(title);
@@ -91,6 +95,7 @@ export default function TaskCard({ id, title, isCompleted, dueDate, onDelete, on
   };
 
   const dueDateInfo = getDueDateInfo();
+  const isDeadlineOver = deadlineAt ? new Date(deadlineAt) < new Date() : false;
 
   const style: React.CSSProperties = {
     transform: transform
@@ -102,11 +107,12 @@ export default function TaskCard({ id, title, isCompleted, dueDate, onDelete, on
 
   return (
     <div
+      id={`task-${id}`}
       ref={setNodeRef}
       style={style}
       {...(mounted && !isEditing ? listeners : {})}
       {...(mounted && !isEditing ? attributes : {})}
-      className={`group bg-white rounded-xl border border-gray-200/60 p-3 hover:border-gray-300 hover:shadow-lg transition-all duration-200 ${
+      className={`relative z-30 group bg-white rounded-xl border border-gray-200/60 p-3 hover:border-gray-300 hover:shadow-lg transition-all duration-200 ${
         isEditing ? 'select-text' : 'select-none'
       } ${
         isDragging ? 'opacity-50 shadow-2xl scale-105 rotate-2' : ''
@@ -173,6 +179,7 @@ export default function TaskCard({ id, title, isCompleted, dueDate, onDelete, on
               >
                 {title}
               </p>
+              <div className="flex items-center gap-2 flex-wrap">
               {dueDateInfo && (
                 <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${dueDateInfo.bgColor} ${dueDateInfo.color}`}>
                   <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -181,40 +188,25 @@ export default function TaskCard({ id, title, isCompleted, dueDate, onDelete, on
                   {dueDateInfo.text}
                 </div>
               )}
+              {deadlineAt && (
+                <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${isDeadlineOver ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-700'}`}>
+                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3" />
+                  </svg>
+                  Deadline
+                </div>
+              )}
+              </div>
             </div>
           )}
         </div>
 
-        {onDelete && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              console.log('Delete clicked for task:', id); // Debug log
-              onDelete(id);
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-            style={{ pointerEvents: 'auto' }}
-            className={`opacity-0 group-hover:opacity-100 flex-shrink-0 p-1 rounded-md transition-all duration-200 z-50 relative ${
-              isCompleted
-                ? 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'
-                : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
-            }`}
-            title={isCompleted ? "Archive task" : "Delete task"}
-          >
-            {isCompleted ? (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8l6 6 6-6" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            )}
-          </button>
+        <div className="flex items-center gap-1">
+        {onUpdate && (
+          <QuickScheduleMenu id={id} dueDate={dueDate} deadlineAt={deadlineAt} onUpdate={onUpdate} />
         )}
+        {onDelete && (<TaskActionMenu id={id} title={title} onDelete={onDelete} />)}
+        </div>
       </div>
 
     </div>
