@@ -1,9 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Fail fast in production if Supabase env vars are misconfigured
+if (process.env.NODE_ENV === 'production') {
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase env vars: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  }
+  if (supabaseUrl.includes('placeholder') || supabaseKey.includes('placeholder')) {
+    throw new Error('Invalid Supabase config: remove placeholder values in production');
+  }
+}
+
+export const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
 export type TaskStatus =
   | 'active'      // Currently working on
