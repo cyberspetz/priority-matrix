@@ -60,34 +60,21 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 4. **Set up the database:**
 
-In your Supabase SQL editor, run:
-```sql
-CREATE TABLE tasks (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  title VARCHAR(255) NOT NULL,
-  description TEXT,
-  quadrant VARCHAR(50) NOT NULL CHECK (quadrant IN (
-    'urgent-important',
-    'not-urgent-important',
-    'urgent-not-important',
-    'not-urgent-not-important'
-  )),
-  is_completed BOOLEAN DEFAULT FALSE,
-  priority INTEGER DEFAULT 0,
-  due_date TIMESTAMP WITH TIME ZONE,
-  user_id UUID,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+In Supabase SQL Editor, apply these scripts in order:
 
--- Create indexes for better performance
-CREATE INDEX idx_tasks_user_id ON tasks(user_id);
-CREATE INDEX idx_tasks_quadrant ON tasks(quadrant);
-
--- Enable Row Level Security (optional)
-ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all operations on tasks" ON tasks FOR ALL USING (true);
+Option A — Flyway (recommended)
+Run locally with Docker after setting DB_* in `.env.local`:
+```bash
+npm run migrate
 ```
+
+Option B — Manual (SQL Editor)
+1) `db/migrations/V20240915__create_tasks.sql` (base schema)
+2) `db/migrations/V20240916__enhanced_task_schema.sql` (indexes, views)
+3) `db/migrations/V20240918__add_sort_index.sql` (manual ordering)
+4) (Optional) `db/policies/20240917_enable_rls_dev.sql` (dev RLS policy)
+
+See `db/README.md` for details.
 
 5. **Run the development server:**
 ```bash

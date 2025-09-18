@@ -16,26 +16,16 @@ This guide provides step-by-step instructions for deploying the Eisenhower Matri
    - Choose your organization and fill in project details
    - Wait for the project to be created
 
-2. **Create the tasks table:**
-   - In your Supabase dashboard, go to the "SQL Editor"
-   - Run the following SQL to create the tasks table:
+2. **Create schema & indexes:**
+   - Option A — Flyway (recommended):
+     - Set DB_* in `.env.local`
+     - Run `npm run migrate`
+   - Option B — Manual (SQL Editor):
+     1) `db/migrations/V20240915__create_tasks.sql`
+     2) `db/migrations/V20240916__enhanced_task_schema.sql`
+     3) `db/migrations/V20240918__add_sort_index.sql`
 
-   ```sql
-   CREATE TABLE tasks (
-     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-     title VARCHAR(255) NOT NULL,
-     description TEXT,
-     quadrant VARCHAR(50) NOT NULL CHECK (quadrant IN (
-       'urgent-important',
-       'not-urgent-important',
-       'urgent-not-important',
-       'not-urgent-not-important'
-     )),
-     is_completed BOOLEAN DEFAULT FALSE,
-     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-   );
-   ```
+   - (Optional) Apply a dev RLS policy: `db/policies/20240917_enable_rls_dev.sql`
 
 3. **Get your Supabase credentials:**
    - Go to Settings > API in your Supabase dashboard

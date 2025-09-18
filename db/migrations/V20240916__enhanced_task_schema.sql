@@ -55,3 +55,4 @@ ORDER BY completion_date DESC;
 -- Grant permissions (adjust as needed for your setup)
 -- GRANT SELECT ON active_tasks TO authenticated;
 -- GRANT SELECT ON task_reports TO authenticated;
+

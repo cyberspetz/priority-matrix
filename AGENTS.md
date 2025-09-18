@@ -3,7 +3,11 @@
 ## Project Structure & Module Organization
 - Source: `src/app` (routes: `page.tsx`, `layout.tsx`, `globals.css`), `src/components` (UI), `src/lib` (`supabaseClient.ts`).
 - Assets: `public/` (static), `docs/` (docs, screenshots).
-- SQL: `database_migration.sql`, `enable_rls.sql`, `cleanup_tasks.sql` (run in Supabase).
+- Database SQL: organized under `db/`:
+  - `db/migrations/` (Flyway versioned migrations)
+  - `db/policies/` (RLS policies)
+  - `db/maintenance/` (one-offs)
+  - See `db/README.md` for order.
 - Path alias: import via `@/*` for anything under `src/`.
 
 ## Build, Test, and Development Commands
@@ -11,6 +15,12 @@
 - `npm run build`: Production build.
 - `npm start`: Serve production build.
 - `npm run lint`: Lint with ESLint (Next core-web-vitals).
+- `npm run migrate`: Apply DB migrations via Flyway (Docker).
+- `npm run migrate:info`: Show migration status.
+
+## CI Migrations
+- Workflow: `.github/workflows/db-migrate.yml` (manual dispatch)
+- Add environment-scoped secrets (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SCHEMA`).
 - First-time setup: `cp .env.local.example .env.local` and fill Supabase vars.
 
 ## Coding Style & Naming Conventions
@@ -35,4 +45,3 @@
 - Required env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`; optional `NEXT_PUBLIC_APP_PASSWORD` for production guard.
 - Never commit secrets; use `.env.example` as reference.
 - Enable/verify Supabase RLS in production (`enable_rls.sql`).
-

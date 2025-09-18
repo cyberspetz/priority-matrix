@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "migrate": "docker run --rm -v $PWD/db/migrations:/flyway/sql -v $PWD/db/flyway.conf:/flyway/conf/flyway.conf --env DB_HOST --env DB_PORT --env DB_NAME --env DB_USER --env DB_PASSWORD --env DB_SCHEMA flyway/flyway:10 migrate",
+    "migrate:info": "docker run --rm -v $PWD/db/migrations:/flyway/sql -v $PWD/db/flyway.conf:/flyway/conf/flyway.conf --env DB_HOST --env DB_PORT --env DB_NAME --env DB_USER --env DB_PASSWORD --env DB_SCHEMA flyway/flyway:10 info",
+    "migrate:repair": "docker run --rm -v $PWD/db/migrations:/flyway/sql -v $PWD/db/flyway.conf:/flyway/conf/flyway.conf --env DB_HOST --env DB_PORT --env DB_NAME --env DB_USER --env DB_PASSWORD --env DB_SCHEMA flyway/flyway:10 repair"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

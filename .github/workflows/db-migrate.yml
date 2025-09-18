@@ -1,0 +1,46 @@
+name: Flyway Migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment (uses environment-scoped secrets)"
+        required: true
+        type: choice
+        options: [production, preview, development]
+        default: production
+      command:
+        description: "Flyway command"
+        required: true
+        type: choice
+        options: [migrate, info, validate, repair]
+        default: migrate
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Flyway ${{ github.event.inputs.command }}
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_SCHEMA: ${{ secrets.DB_SCHEMA }}
+          FLYWAY_COMMAND: ${{ github.event.inputs.command }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DB_SCHEMA:-}" ]; then export DB_SCHEMA=public; fi
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE/db/migrations:/flyway/sql" \
+            -v "$GITHUB_WORKSPACE/db/flyway.conf:/flyway/conf/flyway.conf" \
+            -e DB_HOST -e DB_PORT -e DB_NAME -e DB_USER -e DB_PASSWORD -e DB_SCHEMA \
+            flyway/flyway:10 ${FLYWAY_COMMAND}
+

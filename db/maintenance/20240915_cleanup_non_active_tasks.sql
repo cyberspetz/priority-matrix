@@ -25,3 +25,4 @@ SELECT
   COUNT(*) as remaining_tasks
 FROM tasks
 GROUP BY status;
+
