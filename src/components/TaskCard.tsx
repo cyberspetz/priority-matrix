@@ -1,4 +1,5 @@
-import { useDraggable } from '@dnd-kit/core';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useEffect, useState } from 'react';
 
 interface TaskCardProps {
@@ -16,8 +17,9 @@ export default function TaskCard({ id, title, isCompleted, dueDate, onDelete, on
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(title);
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: id,
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled: isEditing,
   });
 
   // Prevent hydration mismatch by only enabling drag functionality after mount
@@ -90,20 +92,26 @@ export default function TaskCard({ id, title, isCompleted, dueDate, onDelete, on
 
   const dueDateInfo = getDueDateInfo();
 
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-  } : undefined;
+  const style: React.CSSProperties = {
+    transform: transform
+      ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)`
+      : undefined,
+    transition,
+    willChange: transform ? 'transform' : undefined,
+  };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...(mounted ? listeners : {})}
-      {...(mounted ? attributes : {})}
-      className={`group bg-white rounded-xl border border-gray-200/60 p-3 hover:border-gray-300 hover:shadow-lg transition-all duration-200 select-none ${
+      {...(mounted && !isEditing ? listeners : {})}
+      {...(mounted && !isEditing ? attributes : {})}
+      className={`group bg-white rounded-xl border border-gray-200/60 p-3 hover:border-gray-300 hover:shadow-lg transition-all duration-200 ${
+        isEditing ? 'select-text' : 'select-none'
+      } ${
         isDragging ? 'opacity-50 shadow-2xl scale-105 rotate-2' : ''
       } ${
-        mounted ? 'cursor-move' : 'cursor-default'
+        mounted && !isEditing ? 'cursor-move' : 'cursor-text'
       }`}
     >
       <div className="flex items-center gap-3">
@@ -143,7 +151,7 @@ export default function TaskCard({ id, title, isCompleted, dueDate, onDelete, on
               onBlur={handleSaveEdit}
               onMouseDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
-              className="w-full text-sm font-medium text-gray-900 bg-white border border-blue-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+              className="w-full text-sm font-medium text-gray-900 bg-white border border-blue-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500 select-text"
               autoFocus
             />
           ) : (

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DndContext, DragEndEvent, DragStartEvent, DragMoveEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, DragMoveEvent, DragOverEvent } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 // import TaskCard from '@/components/TaskCard';
 import Quadrant from '@/components/Quadrant';
 import AddTaskModal from '@/components/AddTaskModal';
@@ -66,7 +67,9 @@ export default function Home() {
   }, []);
 
   const getTasksByQuadrant = (quadrant: string) => {
-    return tasks.filter(task => task.quadrant === quadrant);
+    return tasks
+      .filter(task => task.quadrant === quadrant)
+      .sort((a, b) => (a.sort_index ?? 0) - (b.sort_index ?? 0));
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -81,31 +84,91 @@ export default function Home() {
     setDragData({ isDragging: false });
 
     const { active, over } = event;
-
     if (!over) return;
 
-    const taskId = active.id as string;
-    const newQuadrant = over.id as Task['quadrant'];
+    const activeId = String(active.id);
+    const overId = String(over.id);
 
-    if (taskId && newQuadrant) {
-      try {
-        // Optimistically update the UI
-        setTasks(tasks =>
-          tasks.map(task =>
-            task.id === taskId
-              ? { ...task, quadrant: newQuadrant }
-              : task
-          )
-        );
+    // Determine containers (quadrants)
+    const activeContainer = (active.data.current as any)?.sortable?.containerId as Task['quadrant'] | undefined;
+    const overContainer = ((over.data.current as any)?.sortable?.containerId as Task['quadrant'] | undefined) || (overId as Task['quadrant']);
 
-        // Update in Supabase
-        await updateTask(taskId, { quadrant: newQuadrant });
-      } catch (error) {
-        console.error('Failed to update task:', error);
-        // Revert the optimistic update by refetching
-        const fetchedTasks = await getAllTasks();
-        setTasks(fetchedTasks);
+    if (!overContainer) return;
+
+    const sourceQuadrant = activeContainer || tasks.find(t => t.id === activeId)?.quadrant;
+    const targetQuadrant = overContainer;
+
+    // Compute indices within their respective lists
+    const sourceList = getTasksByQuadrant(sourceQuadrant!);
+    const targetList = getTasksByQuadrant(targetQuadrant);
+    const oldIndex = sourceList.findIndex(t => t.id === activeId);
+    const overIndex = targetList.findIndex(t => t.id === overId);
+    const newIndex = overIndex >= 0 ? overIndex : targetList.length; // append if dropped on container
+
+    if (oldIndex === -1) return;
+
+    try {
+      setTasks(prev => {
+        let next = [...prev];
+
+        // Remove from source
+        const movingTask = next.find(t => t.id === activeId);
+        if (!movingTask) return prev;
+
+        // Build new lists
+        const newSourceList = sourceList.filter(t => t.id !== activeId);
+        const newTargetList = targetList.slice();
+
+        if (sourceQuadrant === targetQuadrant) {
+          // Reorder within the same quadrant
+          const currentOrder = sourceList.map(t => t.id);
+          const reordered = arrayMove(currentOrder, oldIndex, newIndex);
+          // Apply new indices
+          next = next.map(t => {
+            if (t.quadrant !== sourceQuadrant) return t;
+            const idx = reordered.indexOf(t.id);
+            return { ...t, sort_index: idx } as Task;
+          });
+        } else {
+          // Move across quadrants
+          newTargetList.splice(newIndex, 0, movingTask);
+          // Reindex both affected quadrants
+          next = next.map(t => {
+            if (t.id === movingTask.id) {
+              return { ...t, quadrant: targetQuadrant, sort_index: newIndex } as Task;
+            }
+            if (t.quadrant === sourceQuadrant) {
+              const idx = newSourceList.findIndex(x => x.id === t.id);
+              return { ...t, sort_index: idx } as Task;
+            }
+            if (t.quadrant === targetQuadrant) {
+              const idx = newTargetList.findIndex(x => x.id === t.id);
+              return { ...t, sort_index: idx } as Task;
+            }
+            return t;
+          });
+        }
+
+        return next;
+      });
+
+      // Persist changes to Supabase: update moved item quadrant and reindex sort_index for affected quadrant(s)
+      const after = getTasksByQuadrant(targetQuadrant).map((t, idx) => ({ id: t.id, sort_index: idx }));
+      const affected: { id: string; updates: Partial<Task> }[] = [];
+
+      if (sourceQuadrant === targetQuadrant) {
+        for (const { id, sort_index } of after) affected.push({ id, updates: { sort_index } });
+      } else {
+        const afterSource = getTasksByQuadrant(sourceQuadrant!).map((t, idx) => ({ id: t.id, sort_index: idx }));
+        for (const { id, sort_index } of after) affected.push({ id, updates: { quadrant: targetQuadrant as Task['quadrant'], sort_index } });
+        for (const { id, sort_index } of afterSource) affected.push({ id, updates: { sort_index } });
       }
+
+      await Promise.all(affected.map(a => updateTask(a.id, a.updates)));
+    } catch (error) {
+      console.error('Failed to apply drag reorder:', error);
+      const fetchedTasks = await getAllTasks();
+      setTasks(fetchedTasks);
     }
   };
 

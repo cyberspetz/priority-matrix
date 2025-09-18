@@ -13,7 +13,26 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
-export const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+// Lightweight dev-time diagnostics without exposing secrets
+if (process.env.NODE_ENV !== 'production') {
+  // Log presence and length only
+  // eslint-disable-next-line no-console
+  console.info('[supabase] env loaded:', {
+    urlPresent: Boolean(supabaseUrl),
+    keyPresent: Boolean(supabaseKey),
+    keyLength: supabaseKey?.length ?? 0,
+  });
+}
+
+export const supabase = createClient(supabaseUrl || '', supabaseKey || '', {
+  global: {
+    headers: {
+      // Ensure headers are always present in browser requests
+      apikey: supabaseKey || '',
+      Authorization: `Bearer ${supabaseKey || ''}`,
+    },
+  },
+});
 
 export type TaskStatus =
   | 'active'      // Currently working on
@@ -41,6 +60,8 @@ export interface Task {
   // Priority and scheduling
   priority_level: TaskPriority;
   due_date?: string;
+  // Manual ordering within a quadrant
+  sort_index?: number;
 
   // Time tracking
   time_estimate?: number; // in minutes
@@ -66,6 +87,7 @@ export const getAllTasks = async (): Promise<Task[]> => {
     .from('tasks')
     .select('*')
     .neq('status', 'archived')
+    .order('sort_index', { ascending: true })
     .order('priority_level', { ascending: true })
     .order('due_date', { ascending: true, nullsLast: true })
     .order('created_at', { ascending: true });
@@ -150,6 +172,21 @@ export const createTask = async (
   tags?: string[],
   notes?: string
 ): Promise<Task> => {
+  // Determine next sort_index within the quadrant
+  let nextIndex = 0;
+  try {
+    const { data: maxRow, error: maxErr } = await supabase
+      .from('tasks')
+      .select('sort_index')
+      .eq('quadrant', quadrant)
+      .order('sort_index', { ascending: false })
+      .limit(1)
+      .single();
+    if (!maxErr && maxRow && typeof maxRow.sort_index === 'number') {
+      nextIndex = (maxRow.sort_index ?? 0) + 1;
+    }
+  } catch {}
+
   const { data, error } = await supabase
     .from('tasks')
     .insert([
@@ -161,6 +198,7 @@ export const createTask = async (
         is_completed: false,
         priority_level,
         due_date,
+        sort_index: nextIndex,
         time_estimate,
         tags,
         notes,

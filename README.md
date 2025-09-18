@@ -121,7 +121,7 @@ src/
 │   ├── Quadrant.tsx      # Individual quadrant component
 │   └── TaskCard.tsx      # Individual task card component
 └── lib/
-    └── supabaseClient.ts # Supabase configuration and API functions
+    └── supabaseClient.ts # Supabase configuration and API functions; includes manual sort order support
 ```
 
 ## API Functions

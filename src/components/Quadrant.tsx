@@ -1,4 +1,5 @@
 import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useEffect, useState } from 'react';
 import TaskCard from './TaskCard';
 import QuadrantInfoDialog from './QuadrantInfoDialog';
@@ -66,33 +67,35 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
         </p>
       </div>
 
-      {/* Tasks */}
+      {/* Tasks (Sortable) */}
       <div className="flex-1 space-y-3 min-h-[200px]">
-        {tasks.length === 0 ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
+        <SortableContext id={id} items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+          {tasks.length === 0 ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <p className="text-sm text-gray-500">Drop tasks here</p>
               </div>
-              <p className="text-sm text-gray-500">Drop tasks here</p>
             </div>
-          </div>
-        ) : (
-          tasks.map(task => (
-            <TaskCard
-              key={task.id}
-              id={task.id}
-              title={task.title}
-              isCompleted={task.is_completed}
-              dueDate={task.due_date}
-              onDelete={onDeleteTask}
-              onToggleComplete={onToggleComplete}
-              onEdit={onEditTask}
-            />
-          ))
-        )}
+          ) : (
+            tasks.map(task => (
+              <TaskCard
+                key={task.id}
+                id={task.id}
+                title={task.title}
+                isCompleted={task.is_completed}
+                dueDate={task.due_date}
+                onDelete={onDeleteTask}
+                onToggleComplete={onToggleComplete}
+                onEdit={onEditTask}
+              />
+            ))
+          )}
+        </SortableContext>
       </div>
 
       {/* Info Dialog */}
