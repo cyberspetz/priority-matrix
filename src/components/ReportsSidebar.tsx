@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   getCompletedTasks,
   getOverdueTasks,
@@ -37,28 +37,7 @@ export default function ReportsSidebar({ isOpen, onClose }: ReportsSidebarProps)
   const [loading, setLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadReportData();
-    }
-  }, [isOpen]);
-
-  const loadReportData = async () => {
-    setLoading(true);
-    try {
-      await Promise.all([
-        loadTodayStats(),
-        loadWeeklyReport(),
-        loadOverdueTasks()
-      ]);
-    } catch (error) {
-      console.error('Error loading report data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadTodayStats = async () => {
+  const loadTodayStats = useCallback(async () => {
     const today = new Date().toISOString().split('T')[0];
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -79,12 +58,17 @@ export default function ReportsSidebar({ isOpen, onClose }: ReportsSidebarProps)
       ).length,
       avgTime
     });
-  };
+  }, []);
 
-  const loadWeeklyReport = async () => {
+  const loadOverdueTasksCallback = useCallback(async () => {
+    const overdue = await getOverdueTasks();
+    setOverdueTasks(overdue);
+  }, []);
+
+  const loadWeeklyReport = useCallback(async () => {
     const today = new Date();
     const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+    weekStart.setDate(today.getDate() - today.getDay());
 
     const days: DailyStats[] = [];
     let totalCompleted = 0;
@@ -132,12 +116,28 @@ export default function ReportsSidebar({ isOpen, onClose }: ReportsSidebarProps)
       totalCreated,
       productivityScore
     });
-  };
+  }, []);
 
-  const loadOverdueTasks = async () => {
-    const overdue = await getOverdueTasks();
-    setOverdueTasks(overdue);
-  };
+  const loadReportData = useCallback(async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        loadTodayStats(),
+        loadWeeklyReport(),
+        loadOverdueTasksCallback()
+      ]);
+    } catch (error) {
+      console.error('Error loading report data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadOverdueTasksCallback, loadTodayStats, loadWeeklyReport]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadReportData();
+    }
+  }, [isOpen, loadReportData]);
 
   const generateWeeklySummary = async () => {
     if (!weeklyReport) return;
@@ -270,7 +270,17 @@ Generated on ${formatDate(currentDate)}
   if (!isOpen) return null;
 
   return (
-    <div className="fixed right-0 top-0 h-full w-[30%] bg-gray-100/95 backdrop-blur-sm border-l border-gray-300/60 shadow-2xl z-40 overflow-hidden">
+    <>
+      <div
+        className="fixed inset-0 z-30 bg-black/20"
+        onClick={onClose}
+        onPointerDown={onClose}
+      />
+      <div
+        className="fixed right-0 top-0 z-40 h-full w-full max-w-xl bg-gray-100/95 backdrop-blur-sm border-l border-gray-300/60 shadow-2xl overflow-hidden"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
       {/* Premium Toggle Button - Inspired by high-end design */}
       <button
         onClick={onClose}
@@ -437,7 +447,7 @@ Generated on ${formatDate(currentDate)}
 
                   <div className="space-y-2">
                     <h4 className="font-medium text-gray-900">Daily Breakdown</h4>
-                    {weeklyReport.days.map((day, index) => (
+                    {weeklyReport.days.map((day) => (
                       <div key={day.date} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center space-x-3">
                           <div className="text-sm font-medium text-gray-900">
@@ -489,6 +499,7 @@ Generated on ${formatDate(currentDate)}
         </div>
 
       </div>
-    </div>
+      </div>
+    </>
   );
 }

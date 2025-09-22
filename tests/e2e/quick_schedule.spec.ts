@@ -24,8 +24,6 @@ test.describe('Quick schedule menu', () => {
     await cardContainer.getByTitle('Quick schedule').click();
     await page.getByTestId('qs-menu').waitFor();
     await page.getByTestId('qs-today').click();
-    const today = new Date();
-
     // Close menu and check chip
     await cardContainer.getByTitle('Quick schedule').click();
     await expect(cardContainer.locator('div:has-text("Today")').first()).toBeVisible();

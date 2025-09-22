@@ -6,20 +6,36 @@ import { Transition } from '@headlessui/react';
 interface TaskActionMenuProps {
   id: string;
   title: string;
+  onArchive?: (id: string) => void;
+  onOpenDetail?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
 
-export default function TaskActionMenu({ id, title, onDelete }: TaskActionMenuProps) {
+export default function TaskActionMenu({ id, title, onArchive, onOpenDetail, onDelete }: TaskActionMenuProps) {
   const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState<{ top: number; left: number; openUp?: boolean }>({ top: 0, left: 0 });
+  const [coords, setCoords] = useState<{ top?: number; bottom?: number; left: number; openUp?: boolean }>({ left: 0, top: 0 });
   const [confirmOpen, setConfirmOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement | null>(null);
 
   const openMenu = () => {
     const el = btnRef.current; if (!el) return;
     const rect = el.getBoundingClientRect();
-    const menuHeight = 140; const spaceBelow = window.innerHeight - rect.bottom; const openUp = spaceBelow < menuHeight;
-    setCoords({ top: rect.bottom, left: Math.min(rect.left, window.innerWidth - 240), openUp });
+    const menuWidth = 240;
+    const menuHeight = 140;
+    const margin = 8;
+    const viewportWidth = window.innerWidth;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
+    const maxLeft = Math.max(margin, viewportWidth - menuWidth - margin);
+    const left = Math.min(Math.max(margin, rect.left), maxLeft);
+
+    if (openUp) {
+      const bottom = Math.max(margin, window.innerHeight - rect.top + margin);
+      setCoords({ bottom, left, openUp: true });
+    } else {
+      const top = Math.max(margin, rect.bottom + margin);
+      setCoords({ top, left, openUp: false });
+    }
     setOpen(true);
   };
 
@@ -37,14 +53,6 @@ export default function TaskActionMenu({ id, title, onDelete }: TaskActionMenuPr
     return () => document.removeEventListener('keydown', onKey);
   }, [confirmOpen]);
 
-  const copyLink = async () => {
-    try {
-      const url = `${window.location.origin}${window.location.pathname}#task-${id}`;
-      await navigator.clipboard.writeText(url);
-    } catch {}
-    setOpen(false);
-  };
-
   const Panel = (
     <Transition
       as={Fragment}
@@ -53,20 +61,49 @@ export default function TaskActionMenu({ id, title, onDelete }: TaskActionMenuPr
       leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95"
     >
       <div
-        style={{ position: 'fixed', top: coords.openUp ? undefined : coords.top, bottom: coords.openUp ? Math.max(0, window.innerHeight - coords.top) : undefined, left: coords.left, zIndex: 99999 }}
-        className="mt-2 w-60 rounded-lg bg-white shadow-lg ring-1 ring-black/5 divide-y divide-gray-100"
+        style={{ position: 'fixed', top: coords.openUp ? undefined : coords.top, bottom: coords.openUp ? coords.bottom : undefined, left: coords.left, zIndex: 99999 }}
+        className="w-60 rounded-lg bg-white shadow-lg ring-1 ring-black/5 divide-y divide-gray-100"
+        onPointerDown={(e) => { e.stopPropagation(); }}
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          type="button"
-          data-testid="action-copy"
-          onClick={(e)=>{e.preventDefault(); e.stopPropagation(); copyLink();}}
-          className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100"
-        >
-          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 14.828a4 4 0 010-5.656l1.586-1.586a4 4 0 015.656 5.656l-1.586 1.586M10.172 9.172a4 4 0 000 5.656l1.586 1.586a4 4 0 105.656-5.656l-1.414-1.414"/></svg>
-          Copy link to task
-          <span className="ml-auto text-xs text-gray-400">Shift+C</span>
-        </button>
+        {onOpenDetail && (
+          <button
+            type="button"
+            data-testid="action-open-detail"
+            onPointerDown={(e)=>{e.preventDefault(); e.stopPropagation();}}
+            onClick={(e)=>{
+              e.preventDefault();
+              e.stopPropagation();
+              setOpen(false);
+              onOpenDetail(id);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+          >
+            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 010 5.292M15 21H9a2 2 0 01-2-2v-1a4 4 0 014-4h2a4 4 0 014 4v1a2 2 0 01-2 2zm-3-9a3 3 0 100-6 3 3 0 000 6z" />
+            </svg>
+            Edit details
+          </button>
+        )}
+        {onArchive && (
+          <button
+            type="button"
+            data-testid="action-archive"
+            onPointerDown={(e)=>{e.preventDefault(); e.stopPropagation();}}
+            onClick={(e)=>{
+              e.preventDefault();
+              e.stopPropagation();
+              setOpen(false);
+              onArchive?.(id);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+          >
+            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v16h16V8.828A2 2 0 0019.414 7L14 1.586A2 2 0 0012.586 1H6a2 2 0 00-2 2z" />
+            </svg>
+            Archive task
+          </button>
+        )}
         <button
           type="button"
           data-testid="action-delete"
@@ -94,13 +131,23 @@ export default function TaskActionMenu({ id, title, onDelete }: TaskActionMenuPr
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M5 12a2 2 0 114 0 2 2 0 01-4 0zm5 0a2 2 0 114 0 2 2 0 01-4 0zm7-2a2 2 0 100 4 2 2 0 000-4z"/></svg>
       </button>
       {typeof window !== 'undefined' && open ? createPortal(
-        <div onClick={()=>setOpen(false)} style={{ position:'fixed', inset:0, zIndex: 99998 }}>
+        <div
+          onClick={()=>setOpen(false)}
+          onPointerDown={()=>setOpen(false)}
+          style={{ position:'fixed', inset:0, zIndex: 99998 }}
+        >
           {Panel}
         </div>, document.body
       ) : null}
 
       {typeof window !== 'undefined' && confirmOpen ? createPortal(
-        <div className="fixed inset-0 z-[2147483647]" role="dialog" aria-label="Delete task dialog" onClick={() => setConfirmOpen(false)}>
+        <div
+          className="fixed inset-0 z-[2147483647]"
+          role="dialog"
+          aria-label="Delete task dialog"
+          onClick={() => setConfirmOpen(false)}
+          onPointerDown={() => setConfirmOpen(false)}
+        >
           <div className="absolute inset-0 bg-black/40" />
           <div className="absolute inset-0 flex min-h-full items-center justify-center p-4" onClick={(e)=>e.stopPropagation()} onPointerDown={(e)=>e.stopPropagation()}>
             <div className="relative w-full max-w-md rounded-xl bg-white p-6 text-left align-middle shadow-xl">

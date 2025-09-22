@@ -2,23 +2,20 @@
 import { Transition } from '@headlessui/react';
 import React, { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import type { TaskUpdatePayload } from '@/lib/supabaseClient';
 
 interface QuickScheduleMenuProps {
   id: string;
   dueDate?: string;
   deadlineAt?: string;
-  onUpdate: (id: string, updates: any) => void;
-}
-
-function classNames(...classes: (string | false | undefined)[]) {
-  return classes.filter(Boolean).join(' ');
+  onUpdate: (id: string, updates: TaskUpdatePayload) => void;
 }
 
 export default function QuickScheduleMenu({ id, dueDate, deadlineAt, onUpdate }: QuickScheduleMenuProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
   const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState<{ top: number; left: number; openUp?: boolean }>({ top: 0, left: 0 });
+  const [coords, setCoords] = useState<{ top?: number; bottom?: number; left: number; openUp?: boolean }>({ left: 0, top: 0 });
   const btnRef = useRef<HTMLButtonElement | null>(null);
 
   const localDateString = (d: Date) => {
@@ -30,7 +27,7 @@ export default function QuickScheduleMenu({ id, dueDate, deadlineAt, onUpdate }:
 
   const setDue = (dateStr?: string | null) => {
     if (dateStr === null) {
-      onUpdate(id, { due_date: null } as any);
+      onUpdate(id, { due_date: null });
     } else if (dateStr) {
       onUpdate(id, { due_date: dateStr });
     }
@@ -39,7 +36,7 @@ export default function QuickScheduleMenu({ id, dueDate, deadlineAt, onUpdate }:
 
   const setDeadline = (value?: string | null) => {
     if (value === null) {
-      onUpdate(id, { deadline_at: null } as any);
+      onUpdate(id, { deadline_at: null });
     } else if (value) {
       onUpdate(id, { deadline_at: value });
     }
@@ -69,11 +66,12 @@ export default function QuickScheduleMenu({ id, dueDate, deadlineAt, onUpdate }:
         style={{
           position: 'fixed',
           top: coords.openUp ? undefined : coords.top,
-          bottom: coords.openUp ? Math.max(0, window.innerHeight - coords.top) : undefined,
+          bottom: coords.openUp ? coords.bottom : undefined,
           left: coords.left,
           zIndex: 99999,
         }}
-        className="mt-2 w-56 origin-top-right divide-y divide-gray-100 rounded-lg bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
+        className="w-56 origin-top-right divide-y divide-gray-100 rounded-lg bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
+        onPointerDown={(e) => { e.stopPropagation(); }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-2">
@@ -141,10 +139,22 @@ export default function QuickScheduleMenu({ id, dueDate, deadlineAt, onUpdate }:
     const el = btnRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const menuHeight = 280; // approx
+    const menuWidth = 224;
+    const menuHeight = 320;
+    const margin = 8;
+    const viewportWidth = window.innerWidth;
     const spaceBelow = window.innerHeight - rect.bottom;
-    const openUp = spaceBelow < menuHeight;
-    setCoords({ top: rect.bottom, left: Math.min(rect.left, window.innerWidth - 240), openUp });
+    const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
+    const maxLeft = Math.max(margin, viewportWidth - menuWidth - margin);
+    const left = Math.min(Math.max(margin, rect.left), maxLeft);
+
+    if (openUp) {
+      const bottom = Math.max(margin, window.innerHeight - rect.top + margin);
+      setCoords({ bottom, left, openUp: true });
+    } else {
+      const top = Math.max(margin, rect.bottom + margin);
+      setCoords({ top, left, openUp: false });
+    }
     setOpen(true);
   };
 
@@ -164,7 +174,11 @@ export default function QuickScheduleMenu({ id, dueDate, deadlineAt, onUpdate }:
         </svg>
       </button>
       {typeof window !== 'undefined' && open ? createPortal(
-        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 99998 }}>
+        <div
+          onClick={() => setOpen(false)}
+          onPointerDown={() => setOpen(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 99998 }}
+        >
           {Panel}
         </div>,
         document.body

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import TaskCard from './TaskCard';
 import QuadrantInfoDialog from './QuadrantInfoDialog';
 import { Task } from '@/lib/supabaseClient';
+import type { TaskUpdatePayload } from '@/lib/supabaseClient';
 
 interface QuadrantProps {
   id: string;
@@ -13,11 +14,12 @@ interface QuadrantProps {
   accentColor: string;
   onDeleteTask?: (id: string) => void;
   onToggleComplete?: (id: string) => void;
-  onEditTask?: (id: string, newTitle: string) => void;
-  onUpdateTask?: (id: string, updates: Partial<Task>) => void;
+  onUpdateTask?: (id: string, updates: TaskUpdatePayload) => void;
+  onOpenDetail?: (id: string) => void;
+  onArchiveTask?: (id: string) => void;
 }
 
-export default function Quadrant({ id, title, description, tasks, accentColor, onDeleteTask, onToggleComplete, onEditTask, onUpdateTask }: QuadrantProps) {
+export default function Quadrant({ id, title, description, tasks, accentColor, onDeleteTask, onToggleComplete, onUpdateTask, onOpenDetail, onArchiveTask }: QuadrantProps) {
   const [mounted, setMounted] = useState(false);
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
 
@@ -92,8 +94,9 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
                 dueDate={task.due_date}
                 deadlineAt={task.deadline_at}
                 onDelete={onDeleteTask}
+                onArchive={onArchiveTask}
                 onToggleComplete={onToggleComplete}
-                onEdit={onEditTask}
+                onOpenDetail={onOpenDetail}
                 onUpdate={(taskId, updates) => onUpdateTask?.(taskId, updates)}
               />
             ))

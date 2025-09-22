@@ -16,7 +16,6 @@ if (process.env.NODE_ENV === 'production') {
 // Lightweight dev-time diagnostics without exposing secrets
 if (process.env.NODE_ENV !== 'production') {
   // Log presence and length only
-  // eslint-disable-next-line no-console
   console.info('[supabase] env loaded:', {
     urlPresent: Boolean(supabaseUrl),
     keyPresent: Boolean(supabaseKey),
@@ -84,6 +83,16 @@ export interface Task {
   // User
   user_id?: string;
 }
+
+type BaseTaskUpdate = Partial<Omit<Task, 'id' | 'created_at' | 'updated_at'>>;
+
+export type TaskUpdatePayload = BaseTaskUpdate & {
+  due_date?: string | null;
+  deadline_at?: string | null;
+  notes?: string | null;
+  completed_at?: string | null;
+  archived_at?: string | null;
+};
 
 // Get all active tasks (non-archived)
 export const getAllTasks = async (): Promise<Task[]> => {
@@ -265,7 +274,7 @@ export const createTask = async (
 // Update a task
 export const updateTask = async (
   id: string,
-  updates: Partial<Omit<Task, 'id' | 'created_at' | 'updated_at'>>
+  updates: TaskUpdatePayload
 ): Promise<Task> => {
   if (DEMO) {
     const idx = memTasks.findIndex(t => t.id === id);
@@ -308,7 +317,7 @@ export const deleteTask = async (id: string): Promise<void> => {
 // Archive a task
 export const archiveTask = async (id: string): Promise<Task> => {
   if (DEMO) {
-    return updateTask(id, { status: 'archived', archived_at: new Date().toISOString() } as any);
+    return updateTask(id, { status: 'archived', archived_at: new Date().toISOString() } satisfies TaskUpdatePayload);
   }
   const { data, error } = await supabase
     .from('tasks')
@@ -332,7 +341,7 @@ export const archiveTask = async (id: string): Promise<Task> => {
 // Complete a task
 export const completeTask = async (id: string, actual_time?: number): Promise<Task> => {
   if (DEMO) {
-    return updateTask(id, { status: 'completed', is_completed: true, completed_at: new Date().toISOString(), actual_time } as any);
+    return updateTask(id, { status: 'completed', is_completed: true, completed_at: new Date().toISOString(), actual_time } satisfies TaskUpdatePayload);
   }
   const { data, error } = await supabase
     .from('tasks')
@@ -358,7 +367,7 @@ export const completeTask = async (id: string, actual_time?: number): Promise<Ta
 // Uncomplete a task
 export const uncompleteTask = async (id: string): Promise<Task> => {
   if (DEMO) {
-    return updateTask(id, { status: 'active', is_completed: false, completed_at: null } as any);
+    return updateTask(id, { status: 'active', is_completed: false, completed_at: null } satisfies TaskUpdatePayload);
   }
   const { data, error } = await supabase
     .from('tasks')

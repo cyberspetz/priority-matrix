@@ -33,6 +33,7 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
       <div
         className={`fixed inset-0 bg-black/20 transition-opacity ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} md:hidden`}
         onClick={onClose}
+        onPointerDown={onClose}
       />
 
       {/* Drawer */}
@@ -89,4 +90,3 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
     </>
   );
 }
-

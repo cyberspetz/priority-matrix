@@ -1,5 +1,6 @@
 "use client";
 import React from 'react';
+import type { TaskUpdatePayload } from '@/lib/supabaseClient';
 
 interface TaskListItemProps {
   id: string;
@@ -10,8 +11,9 @@ interface TaskListItemProps {
   isCompleted: boolean;
   onToggleComplete?: (id: string) => void;
   onDelete?: (id: string) => void;
-  onEdit?: (id: string, newTitle: string) => void;
-  onUpdate?: (id: string, updates: any) => void;
+  onUpdate?: (id: string, updates: TaskUpdatePayload) => void;
+  onOpenDetail?: (id: string) => void;
+  onArchive?: (id: string) => void;
 }
 
 const quadrantAccent: Record<TaskListItemProps['quadrant'], string> = {
@@ -39,14 +41,36 @@ function dueChip(due?: string) {
 import QuickScheduleMenu from './QuickScheduleMenu';
 import TaskActionMenu from './TaskActionMenu';
 
-export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt, isCompleted, onToggleComplete, onDelete, onEdit, onUpdate }: TaskListItemProps) {
+export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt, isCompleted, onToggleComplete, onDelete, onUpdate, onOpenDetail, onArchive }: TaskListItemProps) {
   const due = dueChip(dueDate);
   const isDeadlineOver = deadlineAt ? new Date(deadlineAt) < new Date() : false;
 
   return (
-    <div id={`task-${id}`} className={`flex items-center gap-3 p-3 bg-white rounded-lg border ${quadrantAccent[quadrant]} border-l-4`}> 
+    <div
+      id={`task-${id}`}
+      role="button"
+      tabIndex={0}
+      onClick={(event) => {
+        if (!onOpenDetail) return;
+        const target = event.target as HTMLElement;
+        if (target?.closest('[data-skip-task-detail="true"]')) return;
+        onOpenDetail(id);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpenDetail?.(id);
+        }
+      }}
+      className={`flex items-center gap-3 rounded-lg border ${quadrantAccent[quadrant]} border-l-4 bg-white p-3 transition-colors hover:border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}
+    >
       <button
-        onClick={() => onToggleComplete?.(id)}
+        type="button"
+        data-skip-task-detail="true"
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggleComplete?.(id);
+        }}
         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isCompleted ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 hover:border-emerald-400'}`}
         aria-label="Toggle complete"
       >
@@ -67,11 +91,13 @@ export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt,
         </div>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1" data-skip-task-detail="true">
         {onUpdate && (
           <QuickScheduleMenu id={id} dueDate={dueDate} deadlineAt={deadlineAt} onUpdate={onUpdate} />
         )}
-        {onDelete && (<TaskActionMenu id={id} title={title} onDelete={onDelete} />)}
+        {(onArchive || onDelete || onOpenDetail) && (
+          <TaskActionMenu id={id} title={title} onArchive={onArchive} onDelete={onDelete} onOpenDetail={onOpenDetail} />
+        )}
       </div>
     </div>
   );

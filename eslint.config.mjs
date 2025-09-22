@@ -18,6 +18,12 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "docs/**",
+      "test-results/**",
+      "analyze-genpeach.js",
+      "detailed-genpeach-analysis.js",
+      "screenshot.js",
+      "src/components/FluidBackground.tsx",
     ],
   },
 ];

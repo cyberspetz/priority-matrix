@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { DndContext, DragEndEvent, DragStartEvent, DragMoveEvent, DragOverEvent } from '@dnd-kit/core';
+import { useState, useEffect, useMemo } from 'react';
+import { DndContext, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 // import TaskCard from '@/components/TaskCard';
 import Quadrant from '@/components/Quadrant';
@@ -10,8 +10,9 @@ import FluidBackground from '@/components/FluidBackground';
 import ReportsSidebar from '@/components/ReportsSidebar';
 import SidebarNav from '@/components/SidebarNav';
 import TaskListItem from '@/components/TaskListItem';
+import TaskDetailSheet from '@/components/TaskDetailSheet';
 import PasswordProtection from '@/components/PasswordProtection';
-import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, completeTask, uncompleteTask, archiveCompletedTasks, archiveTask, Task } from '@/lib/supabaseClient';
+import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, completeTask, uncompleteTask, archiveTask, Task, TaskUpdatePayload } from '@/lib/supabaseClient';
 
 interface FluidConfig {
   intensity: number;
@@ -34,6 +35,7 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState<'inbox' | 'today' | 'upcoming'>('inbox');
   const [loading, setLoading] = useState(true);
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [dragData, setDragData] = useState<{ isDragging: boolean; position?: { x: number; y: number } }>({
     isDragging: false
   });
@@ -70,6 +72,12 @@ export default function Home() {
     loadTasks();
   }, []);
 
+  useEffect(() => {
+    if (detailTaskId && !tasks.some(task => task.id === detailTaskId)) {
+      setDetailTaskId(null);
+    }
+  }, [detailTaskId, tasks]);
+
   const getTasksByQuadrant = (quadrant: string) => {
     return tasks
       .filter(task => task.quadrant === quadrant)
@@ -100,7 +108,12 @@ export default function Home() {
     upcoming: upcomingTasks.filter(t => t.due_date && t.due_date > todayStr).length,
   };
 
-  const handleDragStart = (event: DragStartEvent) => {
+  const detailTask = useMemo(() => {
+    if (!detailTaskId) return null;
+    return tasks.find(t => t.id === detailTaskId) ?? null;
+  }, [detailTaskId, tasks]);
+
+  const handleDragStart = () => {
     setDragData({ isDragging: true });
   };
 
@@ -118,8 +131,9 @@ export default function Home() {
     const overId = String(over.id);
 
     // Determine containers (quadrants)
-    const activeContainer = (active.data.current as any)?.sortable?.containerId as Task['quadrant'] | undefined;
-    const overContainer = ((over.data.current as any)?.sortable?.containerId as Task['quadrant'] | undefined) || (overId as Task['quadrant']);
+    type SortableMeta = { sortable?: { containerId?: Task['quadrant'] } } | undefined;
+    const activeContainer = (active.data.current as SortableMeta)?.sortable?.containerId;
+    const overContainer = (over.data.current as SortableMeta)?.sortable?.containerId || (overId as Task['quadrant']);
 
     if (!overContainer) return;
 
@@ -200,6 +214,30 @@ export default function Home() {
     }
   };
 
+  const openTaskDetail = (id: string) => {
+    setDetailTaskId(id);
+  };
+
+  const closeTaskDetail = () => {
+    setDetailTaskId(null);
+  };
+
+  const archiveTaskLocal = async (id: string) => {
+    try {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+
+      setTasks(prev => prev.filter(t => t.id !== id));
+      setDetailTaskId(current => (current === id ? null : current));
+
+      await archiveTask(id);
+    } catch (error) {
+      console.error('Failed to archive task:', error);
+      const fetched = await getAllTasks();
+      setTasks(fetched);
+    }
+  };
+
   const addTask = async (title: string, dueDate?: string, deadlineAt?: string) => {
     try {
       const newTask = await createTask(title, 'urgent-important', undefined, dueDate, undefined, undefined, undefined, undefined, undefined, deadlineAt);
@@ -226,6 +264,7 @@ export default function Home() {
 
       // Optimistically update the UI
       setTasks(prevTasks => prevTasks.filter(task => task.id !== id));
+      setDetailTaskId(current => (current === id ? null : current));
 
       // Archive completed tasks, delete active tasks
       if (task.is_completed) {
@@ -279,33 +318,10 @@ export default function Home() {
     }
   };
 
-  const editTask = async (id: string, newTitle: string) => {
-    try {
-      if (!newTitle.trim()) return;
-
-      // Optimistically update the UI
-      setTasks(prevTasks =>
-        prevTasks.map(task =>
-          task.id === id
-            ? { ...task, title: newTitle.trim() }
-            : task
-        )
-      );
-
-      // Update in Supabase
-      await updateTask(id, { title: newTitle.trim() });
-    } catch (error) {
-      console.error('Failed to edit task:', error);
-      // Revert the optimistic update by refetching
-      const fetchedTasks = await getAllTasks();
-      setTasks(fetchedTasks);
-    }
-  };
-
-  const updateTaskFields = async (id: string, updates: Partial<Task>) => {
+  const updateTaskFields = async (id: string, updates: TaskUpdatePayload) => {
     try {
       setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-      await updateTask(id, updates as any);
+      await updateTask(id, updates);
     } catch (error) {
       console.error('Failed to update task fields:', error);
       const fetched = await getAllTasks();
@@ -328,7 +344,7 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       {/* Mouse-Interactive Fluid Background */}
       <FluidBackground dragData={dragData} config={fluidConfig} />
-      <div className="max-w-7xl mx-auto p-6">
+      <div className={`${activeView === 'inbox' ? 'max-w-7xl' : 'max-w-3xl'} mx-auto px-4 sm:px-6 lg:px-8 py-6`}>
         {/* Sidebar toggle */}
         <button
           onClick={() => setIsSidebarOpen(true)}
@@ -386,8 +402,9 @@ export default function Home() {
                   accentColor="bg-emerald-500"
                   onDeleteTask={deleteTask}
                   onToggleComplete={toggleTaskComplete}
-                  onEditTask={editTask}
                   onUpdateTask={updateTaskFields}
+                  onOpenDetail={openTaskDetail}
+                  onArchiveTask={archiveTaskLocal}
                 />
                 <Quadrant
                   id="not-urgent-important"
@@ -397,8 +414,9 @@ export default function Home() {
                   accentColor="bg-sky-500"
                   onDeleteTask={deleteTask}
                   onToggleComplete={toggleTaskComplete}
-                  onEditTask={editTask}
                   onUpdateTask={updateTaskFields}
+                  onOpenDetail={openTaskDetail}
+                  onArchiveTask={archiveTaskLocal}
                 />
                 <Quadrant
                   id="urgent-not-important"
@@ -408,8 +426,9 @@ export default function Home() {
                   accentColor="bg-amber-500"
                   onDeleteTask={deleteTask}
                   onToggleComplete={toggleTaskComplete}
-                  onEditTask={editTask}
                   onUpdateTask={updateTaskFields}
+                  onOpenDetail={openTaskDetail}
+                  onArchiveTask={archiveTaskLocal}
                 />
                 <Quadrant
                   id="not-urgent-not-important"
@@ -419,13 +438,14 @@ export default function Home() {
                   accentColor="bg-slate-500"
                   onDeleteTask={deleteTask}
                   onToggleComplete={toggleTaskComplete}
-                  onEditTask={editTask}
                   onUpdateTask={updateTaskFields}
+                  onOpenDetail={openTaskDetail}
+                  onArchiveTask={archiveTaskLocal}
                 />
               </div>
             </DndContext>
           ) : activeView === 'today' ? (
-            <div className="space-y-3">
+            <div className="space-y-3 w-full max-w-2xl mx-auto">
               {todayTasks.length === 0 && <div className="text-sm text-gray-500">No tasks for today.</div>}
               {todayTasks.map(t => (
                 <TaskListItem
@@ -438,19 +458,33 @@ export default function Home() {
                   isCompleted={t.is_completed}
                   onToggleComplete={toggleTaskComplete}
                   onDelete={deleteTask}
-                  onEdit={editTask}
                   onUpdate={updateTaskFields}
+                  onOpenDetail={openTaskDetail}
+                  onArchive={archiveTaskLocal}
                 />
               ))}
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-6 w-full max-w-2xl mx-auto">
               {/* Upcoming: groups */}
               <div>
                 <div className="text-xs font-semibold text-slate-600 mb-2">Today</div>
                 <div className="space-y-3">
                   {tasks.filter(t => isActive(t) && t.due_date?.startsWith(todayStr)).map(t => (
-                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} onUpdate={updateTaskFields} />
+                    <TaskListItem
+                      key={t.id}
+                      id={t.id}
+                      title={t.title}
+                      quadrant={t.quadrant}
+                      dueDate={t.due_date}
+                      deadlineAt={t.deadline_at}
+                      isCompleted={t.is_completed}
+                      onToggleComplete={toggleTaskComplete}
+                      onDelete={deleteTask}
+                      onUpdate={updateTaskFields}
+                      onOpenDetail={openTaskDetail}
+                      onArchive={archiveTaskLocal}
+                    />
                   ))}
                 </div>
               </div>
@@ -458,7 +492,20 @@ export default function Home() {
                 <div className="text-xs font-semibold text-slate-600 mb-2">Tomorrow</div>
                 <div className="space-y-3">
                   {tasks.filter(t => isActive(t) && t.due_date === tomorrowStr).map(t => (
-                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} onUpdate={updateTaskFields} />
+                    <TaskListItem
+                      key={t.id}
+                      id={t.id}
+                      title={t.title}
+                      quadrant={t.quadrant}
+                      dueDate={t.due_date}
+                      deadlineAt={t.deadline_at}
+                      isCompleted={t.is_completed}
+                      onToggleComplete={toggleTaskComplete}
+                      onDelete={deleteTask}
+                      onUpdate={updateTaskFields}
+                      onOpenDetail={openTaskDetail}
+                      onArchive={archiveTaskLocal}
+                    />
                   ))}
                 </div>
               </div>
@@ -469,7 +516,20 @@ export default function Home() {
                     if (!isActive(t) || !t.due_date) return false;
                     return t.due_date > tomorrowStr && (new Date(t.due_date) <= new Date(new Date().setDate(new Date().getDate() + 7)));
                   }).map(t => (
-                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} onUpdate={updateTaskFields} />
+                    <TaskListItem
+                      key={t.id}
+                      id={t.id}
+                      title={t.title}
+                      quadrant={t.quadrant}
+                      dueDate={t.due_date}
+                      deadlineAt={t.deadline_at}
+                      isCompleted={t.is_completed}
+                      onToggleComplete={toggleTaskComplete}
+                      onDelete={deleteTask}
+                      onUpdate={updateTaskFields}
+                      onOpenDetail={openTaskDetail}
+                      onArchive={archiveTaskLocal}
+                    />
                   ))}
                 </div>
               </div>
@@ -480,7 +540,20 @@ export default function Home() {
                     if (!isActive(t) || !t.due_date) return false;
                     return new Date(t.due_date) > new Date(new Date().setDate(new Date().getDate() + 7));
                   }).map(t => (
-                    <TaskListItem key={t.id} id={t.id} title={t.title} quadrant={t.quadrant} dueDate={t.due_date} deadlineAt={t.deadline_at} isCompleted={t.is_completed} onToggleComplete={toggleTaskComplete} onDelete={deleteTask} onEdit={editTask} onUpdate={updateTaskFields} />
+                    <TaskListItem
+                      key={t.id}
+                      id={t.id}
+                      title={t.title}
+                      quadrant={t.quadrant}
+                      dueDate={t.due_date}
+                      deadlineAt={t.deadline_at}
+                      isCompleted={t.is_completed}
+                      onToggleComplete={toggleTaskComplete}
+                      onDelete={deleteTask}
+                      onUpdate={updateTaskFields}
+                      onOpenDetail={openTaskDetail}
+                      onArchive={archiveTaskLocal}
+                    />
                   ))}
                 </div>
               </div>
@@ -494,10 +567,34 @@ export default function Home() {
           onAddTask={addTask}
         />
 
+        <TaskDetailSheet
+          task={detailTask}
+          isOpen={Boolean(detailTask)}
+          onClose={closeTaskDetail}
+          onUpdate={(taskId, updates) => updateTaskFields(taskId, updates)}
+          onToggleComplete={toggleTaskComplete}
+          onDelete={async (taskId) => {
+            closeTaskDetail();
+            await deleteTask(taskId);
+          }}
+          onArchive={(taskId) => archiveTaskLocal(taskId)}
+        />
+
         <ReportsSidebar
           isOpen={isReportsOpen}
           onClose={() => setIsReportsOpen(false)}
         />
+
+        <button
+          type="button"
+          onClick={() => setIsModalOpen(true)}
+          className="md:hidden fixed bottom-6 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl transition-all duration-200 hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+          aria-label="Add task"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 5v14m7-7H5" />
+          </svg>
+        </button>
 
         {/* Premium Floating Toggle Button - hidden on mobile */}
         {!isReportsOpen && (
