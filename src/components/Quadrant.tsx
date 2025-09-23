@@ -32,13 +32,13 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
   }, []);
 
   const getQuadrantStyles = () => {
-    const baseStyles = "bg-white/70 backdrop-blur-sm border border-gray-200/50 rounded-2xl p-3 md:p-6 flex flex-col transition-all duration-300 overflow-visible";
+    const baseStyles = "rounded-2xl border border-transparent bg-transparent p-2 transition-all duration-300 md:border-gray-200/50 md:bg-white/70 md:p-6 md:backdrop-blur-sm flex flex-col overflow-visible";
 
     if (mounted && isOver) {
-      return `${baseStyles} ring-2 ring-blue-400/50 shadow-xl scale-[1.02] bg-blue-50/30`;
+      return `${baseStyles} ring-2 ring-blue-400/40 shadow-xl scale-[1.01] md:bg-blue-50/30`;
     }
 
-    return `${baseStyles} hover:shadow-lg hover:border-gray-300/50`;
+    return `${baseStyles} md:hover:shadow-lg md:hover:border-gray-300/50`;
   };
 
   return (
@@ -71,7 +71,7 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
       </div>
 
       {/* Tasks (Sortable) */}
-      <div className="flex-1 space-y-3 min-h-[160px] md:min-h-[200px]">
+      <div className="flex-1 space-y-2 md:space-y-3 min-h-[120px] md:min-h-[200px]">
         <SortableContext id={id} items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.length === 0 ? (
             <div className="flex items-center justify-center h-32">

@@ -92,11 +92,11 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
       {...(mounted ? attributes : {})}
       onClick={handleCardClick}
       onDoubleClick={handleCardClick}
-      className={`relative z-30 group select-none rounded-xl border border-gray-200/60 bg-white px-4 py-3 transition-all duration-200 hover:border-gray-300 hover:shadow-lg ${
-        isDragging ? 'pointer-events-none scale-105 rotate-1 shadow-2xl' : 'cursor-pointer'
+      className={`relative z-30 group select-none rounded-xl border border-gray-200/50 bg-white/95 px-3 py-2 shadow-sm transition-all duration-200 md:px-4 md:py-3 md:shadow-none md:hover:border-gray-300 md:hover:shadow-lg ${
+        isDragging ? 'pointer-events-none scale-[1.01] shadow-xl' : 'cursor-pointer'
       }`}
     >
-      <div className="flex flex-wrap items-start gap-3">
+      <div className="flex flex-wrap items-start gap-2 md:gap-3">
         <button
           type="button"
           data-skip-task-detail="true"
@@ -127,19 +127,19 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
 
         <div className="min-w-0 flex-1 space-y-1">
           <p
-            className={`truncate text-sm font-medium transition-colors ${
-              isCompleted ? 'line-through text-gray-500' : 'text-gray-900 group-hover:text-blue-600'
+            className={`truncate text-[0.95rem] font-medium transition-colors md:text-sm ${
+              isCompleted ? 'line-through text-gray-400' : 'text-gray-900 md:group-hover:text-blue-600'
             }`}
           >
             {title}
           </p>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 text-[0.7rem] md:text-xs">
             <span
               data-priority-pill
               data-priority-level={priority}
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${priorityMeta.badgeTone} ${priorityMeta.badgeText}`}
+              className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${priorityMeta.badgeTone} ${priorityMeta.badgeText}`}
             >
-              <svg className={`h-3 w-3 ${priorityMeta.iconFill}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+              <svg className={`h-[0.65rem] w-[0.65rem] ${priorityMeta.iconFill}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
                 <path d="M5 3a1 1 0 011-1h8a1 1 0 01.8 1.6L13.25 7l1.55 2.4A1 1 0 0114 11H6v6a1 1 0 11-2 0V3z" />
               </svg>
               {priorityMeta.flagLabel}
@@ -147,9 +147,9 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
             {dueDateInfo && (
               <div
                 title="Scheduled start"
-                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${dueDateInfo.bgColor} ${dueDateInfo.color}`}
+                className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${dueDateInfo.bgColor} ${dueDateInfo.color}`}
               >
-                <svg className="mr-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-[0.7rem] w-[0.7rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 {dueDateInfo.text}
@@ -169,7 +169,7 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
         </div>
 
         <div
-          className="order-3 flex w-full items-center justify-end gap-1 pt-2 transition-opacity sm:order-none sm:w-auto sm:justify-normal sm:pt-0 sm:ml-auto md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+          className="order-3 flex w-full items-center justify-end gap-1 pt-1 transition-opacity sm:order-none sm:w-auto sm:justify-normal sm:pt-0 sm:ml-auto md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
           data-skip-task-detail="true"
         >
           {onUpdate && <QuickScheduleMenu id={id} dueDate={dueDate} deadlineAt={deadlineAt} priority={priority} onUpdate={onUpdate} />}

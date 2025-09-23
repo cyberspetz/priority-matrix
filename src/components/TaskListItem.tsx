@@ -89,7 +89,7 @@ export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt,
           onOpenDetail?.(id);
         }
       }}
-      className={`group flex flex-wrap items-start gap-3 rounded-lg border ${quadrantAccent[quadrant]} border-l-4 bg-white px-4 py-3 transition-colors hover:border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}
+      className={`group flex flex-wrap items-start gap-2 rounded-xl border ${quadrantAccent[quadrant]} border-l-4 bg-white/95 px-3 py-2 shadow-sm transition-colors md:px-4 md:py-3 md:shadow-none hover:border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}
     >
       <button
         type="button"
@@ -109,14 +109,14 @@ export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt,
       </button>
 
       <div className="flex-1 min-w-0">
-        <div className={`text-sm ${isCompleted ? 'line-through text-gray-400' : 'text-gray-900'}`}>{title}</div>
-        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+        <div className={`text-[0.95rem] md:text-sm ${isCompleted ? 'line-through text-gray-400' : 'text-gray-900'}`}>{title}</div>
+        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[0.7rem] md:text-xs">
           <span
             data-priority-pill
             data-priority-level={priority}
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${priorityMeta.badgeTone} ${priorityMeta.badgeText}`}
+            className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${priorityMeta.badgeTone} ${priorityMeta.badgeText}`}
           >
-            <svg className={`h-3 w-3 ${priorityMeta.iconFill}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+            <svg className={`h-[0.65rem] w-[0.65rem] ${priorityMeta.iconFill}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
               <path d="M5 3a1 1 0 011-1h8a1 1 0 01.8 1.6L13.25 7l1.55 2.4A1 1 0 0114 11H6v6a1 1 0 11-2 0V3z" />
             </svg>
             {priorityMeta.flagLabel}
