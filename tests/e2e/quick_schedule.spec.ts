@@ -6,7 +6,7 @@ test.describe('Quick schedule menu', () => {
 
     // Open sidebar and add a new task via modal
     await page.getByTitle('Open menu').click();
-    await page.getByRole('button', { name: 'Add task', exact: true }).click();
+    await page.locator('aside').getByRole('button', { name: 'Add task', exact: true }).click();
 
     // Modal appears; enter title and submit
     const title = 'Test task ' + Math.random().toString(36).slice(2, 6);
@@ -18,21 +18,36 @@ test.describe('Quick schedule menu', () => {
     const card = page.getByText(title, { exact: true });
     await expect(card).toBeVisible();
 
-    // Open quick schedule menu (calendar button) - find nearest by role/title
-    // Move to parent card container then click calendar icon within
-    const cardContainer = card.locator('..').locator('..').locator('..');
+    const cardContainer = page.locator('[id^="task-"]', { hasText: title }).first();
     await cardContainer.getByTitle('Quick schedule').click();
     await page.getByTestId('qs-menu').waitFor();
-    await page.getByTestId('qs-today').click();
-    // Close menu and check chip
-    await cardContainer.getByTitle('Quick schedule').click();
-    await expect(cardContainer.locator('div:has-text("Today")').first()).toBeVisible();
+    const todayOption = page.getByTestId('qs-today');
+    await todayOption.scrollIntoViewIfNeeded();
+    await todayOption.click();
+    await page.getByTestId('qs-menu').waitFor({ state: 'detached' });
+    await expect(cardContainer.locator('[title="Scheduled start"]:has-text("Today")').first()).toBeVisible();
 
     // Change to Tomorrow
     await cardContainer.getByTitle('Quick schedule').click();
     await page.getByTestId('qs-menu').waitFor();
-    await page.getByTestId('qs-tomorrow').click();
+    const tomorrowOption = page.getByTestId('qs-tomorrow');
+    await tomorrowOption.scrollIntoViewIfNeeded();
+    await tomorrowOption.click();
+    await page.getByTestId('qs-menu').waitFor({ state: 'detached' });
+    await expect(cardContainer.locator('[title="Scheduled start"]:has-text("Tomorrow")').first()).toBeVisible();
+
+    // Update priority via quick menu
     await cardContainer.getByTitle('Quick schedule').click();
-    await expect(cardContainer.locator('div:has-text("Tomorrow")').first()).toBeVisible();
+    await page.getByTestId('qs-menu').waitFor();
+    const priorityCritical = page.getByTestId('qs-priority-p1');
+    await priorityCritical.scrollIntoViewIfNeeded();
+    await priorityCritical.click();
+    await page.getByTestId('qs-menu').waitFor({ state: 'detached' });
+    await expect(cardContainer.locator('[data-priority-pill][data-priority-level="p1"]').first()).toBeVisible();
+
+    // Completing the task should hide schedule badges
+    await cardContainer.getByRole('button', { name: 'Mark complete' }).click();
+    await expect(cardContainer.locator('[title="Scheduled start"]')).toHaveCount(0);
+    await expect(cardContainer.locator('[title="Deadline"]')).toHaveCount(0);
   });
 });

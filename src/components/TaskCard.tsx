@@ -1,8 +1,10 @@
 import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import QuickScheduleMenu from './QuickScheduleMenu';
 import TaskActionMenu from './TaskActionMenu';
 import { useEffect, useState, type CSSProperties, type MouseEvent } from 'react';
-import type { TaskUpdatePayload } from '@/lib/supabaseClient';
+import type { TaskPriority, TaskUpdatePayload } from '@/lib/supabaseClient';
+import { getPriorityMeta } from '@/lib/priority';
 
 interface TaskCardProps {
   id: string;
@@ -10,6 +12,7 @@ interface TaskCardProps {
   isCompleted: boolean;
   dueDate?: string;
   deadlineAt?: string;
+  priority: TaskPriority;
   onDelete?: (id: string) => void;
   onToggleComplete?: (id: string) => void;
   onArchive?: (id: string) => void;
@@ -17,7 +20,7 @@ interface TaskCardProps {
   onUpdate?: (id: string, updates: TaskUpdatePayload) => void;
 }
 
-export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, onDelete, onToggleComplete, onArchive, onOpenDetail, onUpdate }: TaskCardProps) {
+export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, priority, onDelete, onToggleComplete, onArchive, onOpenDetail, onUpdate }: TaskCardProps) {
   const [mounted, setMounted] = useState(false);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -29,7 +32,11 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
   const getDueDateInfo = () => {
     if (!dueDate) return null;
 
-    const due = new Date(dueDate);
+    const due = (() => {
+      const [datePart] = dueDate.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      return new Date(year, (month || 1) - 1, day || 1);
+    })();
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
@@ -56,14 +63,13 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
     return { text: due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), color: 'text-violet-700', bgColor: 'bg-violet-50' };
   };
 
-  const dueDateInfo = getDueDateInfo();
+  const dueDateInfo = !isCompleted ? getDueDateInfo() : null;
   const isDeadlineOver = deadlineAt ? new Date(deadlineAt) < new Date() : false;
+  const priorityMeta = getPriorityMeta(priority);
 
   const style: CSSProperties = {
-    transform: transform
-      ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)`
-      : undefined,
-    transition,
+    transform: transform ? CSS.Transform.toString(transform) : undefined,
+    transition: transition ?? 'transform 180ms cubic-bezier(0.2, 0, 0.2, 1)',
     willChange: transform ? 'transform' : undefined,
   };
 
@@ -71,7 +77,10 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
     if (!onOpenDetail || isDragging) return;
     const target = event.target as HTMLElement;
     if (target?.closest('[data-skip-task-detail="true"]')) return;
-    onOpenDetail(id);
+    if (event.detail === 0 || event.detail >= 2) {
+      event.preventDefault();
+      onOpenDetail(id);
+    }
   };
 
   return (
@@ -82,11 +91,12 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
       {...(mounted ? listeners : {})}
       {...(mounted ? attributes : {})}
       onClick={handleCardClick}
-      className={`relative z-30 group select-none rounded-xl border border-gray-200/60 bg-white p-3 transition-all duration-200 hover:border-gray-300 hover:shadow-lg ${
+      onDoubleClick={handleCardClick}
+      className={`relative z-30 group select-none rounded-xl border border-gray-200/60 bg-white px-4 py-3 transition-all duration-200 hover:border-gray-300 hover:shadow-lg ${
         isDragging ? 'pointer-events-none scale-105 rotate-1 shadow-2xl' : 'cursor-pointer'
       }`}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-start gap-3">
         <button
           type="button"
           data-skip-task-detail="true"
@@ -102,7 +112,9 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
         >
           <div
             className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all ${
-              isCompleted ? 'border-emerald-500 bg-emerald-500' : 'border-gray-300 hover:border-emerald-400'
+              isCompleted
+                ? `${priorityMeta.circleBorder} ${priorityMeta.completedFill}`
+                : `${priorityMeta.circleBorder} ${priorityMeta.circleFill}`
             }`}
           >
             {isCompleted && (
@@ -122,16 +134,29 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
             {title}
           </p>
           <div className="flex flex-wrap items-center gap-2">
+            <span
+              data-priority-pill
+              data-priority-level={priority}
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${priorityMeta.badgeTone} ${priorityMeta.badgeText}`}
+            >
+              <svg className={`h-3 w-3 ${priorityMeta.iconFill}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                <path d="M5 3a1 1 0 011-1h8a1 1 0 01.8 1.6L13.25 7l1.55 2.4A1 1 0 0114 11H6v6a1 1 0 11-2 0V3z" />
+              </svg>
+              {priorityMeta.flagLabel}
+            </span>
             {dueDateInfo && (
-              <div className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${dueDateInfo.bgColor} ${dueDateInfo.color}`}>
+              <div
+                title="Scheduled start"
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${dueDateInfo.bgColor} ${dueDateInfo.color}`}
+              >
                 <svg className="mr-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 {dueDateInfo.text}
               </div>
             )}
-            {deadlineAt && (
-              <div className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+            {deadlineAt && !isCompleted && (
+              <div title="Deadline" className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                 isDeadlineOver ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-700'
               }`}>
                 <svg className="mr-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,8 +168,11 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
           </div>
         </div>
 
-        <div className="flex items-center gap-1" data-skip-task-detail="true">
-          {onUpdate && <QuickScheduleMenu id={id} dueDate={dueDate} deadlineAt={deadlineAt} onUpdate={onUpdate} />}
+        <div
+          className="order-3 flex w-full items-center justify-end gap-1 pt-2 transition-opacity sm:order-none sm:w-auto sm:justify-normal sm:pt-0 sm:ml-auto md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+          data-skip-task-detail="true"
+        >
+          {onUpdate && <QuickScheduleMenu id={id} dueDate={dueDate} deadlineAt={deadlineAt} priority={priority} onUpdate={onUpdate} />}
           {(onArchive || onDelete || onOpenDetail) && (
             <TaskActionMenu id={id} title={title} onArchive={onArchive} onDelete={onDelete} onOpenDetail={onOpenDetail} />
           )}

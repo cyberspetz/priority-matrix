@@ -93,6 +93,7 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
                 isCompleted={task.is_completed}
                 dueDate={task.due_date}
                 deadlineAt={task.deadline_at}
+                priority={task.priority_level ?? 'p3'}
                 onDelete={onDeleteTask}
                 onArchive={onArchiveTask}
                 onToggleComplete={onToggleComplete}

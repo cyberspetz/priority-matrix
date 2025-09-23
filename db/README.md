@@ -7,6 +7,8 @@ This folder organizes all SQL needed for local setup and production maintenance.
   - `V20240915__create_tasks.sql`: base schema (creates `tasks` with full columns)
   - `V20240916__enhanced_task_schema.sql`: adds extended fields, views, and indexes
   - `V20240918__add_sort_index.sql`: adds `sort_index` for manual ordering and related index
+  - `V20240919__add_deadline.sql`: introduces the `deadline_at` column
+  - `V20240922__normalize_due_date_to_date.sql`: converts `due_date` to DATE and refreshes indexes/views
 - `policies/`: RLS policies and related security scripts
   - `20240917_enable_rls_dev.sql`: enables RLS with permissive dev policy (replace for prod)
 - `maintenance/`: one-off maintenance scripts
@@ -22,7 +24,9 @@ Option B — Manual (SQL Editor)
 1) `migrations/V20240915__create_tasks.sql`
 2) `migrations/V20240916__enhanced_task_schema.sql`
 3) `migrations/V20240918__add_sort_index.sql`
-4) (Optional) `policies/20240917_enable_rls_dev.sql`
+4) `migrations/V20240919__add_deadline.sql`
+5) `migrations/V20240922__normalize_due_date_to_date.sql`
+6) (Optional) `policies/20240917_enable_rls_dev.sql`
 
 ## GitHub Action (CI/CD)
 - Workflow: `.github/workflows/db-migrate.yml`

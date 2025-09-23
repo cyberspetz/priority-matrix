@@ -1,5 +1,6 @@
 "use client";
 import React from 'react';
+import { usePasswordProtection } from './PasswordProtection';
 
 type View = 'inbox' | 'today' | 'upcoming';
 
@@ -12,6 +13,7 @@ interface SidebarNavProps {
 }
 
 export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, counts }: SidebarNavProps) {
+  const { logout } = usePasswordProtection();
   const NavItem: React.FC<{ icon: React.ReactNode; label: string; count?: number; onClick: () => void }> = ({ icon, label, count, onClick }) => (
     <button
       onClick={() => { onClick(); onClose(); }}
@@ -84,6 +86,18 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
               count={counts.upcoming}
               onClick={() => onSelect('upcoming')}
             />
+          </div>
+
+          <div className="pt-4 mt-6 border-t border-gray-100">
+            <button
+              onClick={() => { logout(); onClose(); }}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-500 hover:bg-gray-100"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 012 2v1" />
+              </svg>
+              <span className="text-sm font-medium">Logout</span>
+            </button>
           </div>
         </div>
       </aside>

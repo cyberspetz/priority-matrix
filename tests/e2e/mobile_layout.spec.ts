@@ -7,7 +7,7 @@ test.describe('Mobile layout', () => {
     // Header elements should be hidden on mobile
     await expect(page.getByText('Priority Matrix')).toBeHidden();
     await expect(page.getByRole('button', { name: 'Reports' })).toBeHidden();
-    await expect(page.getByRole('button', { name: 'Add Task' })).toBeHidden();
+    await expect(page.getByTestId('header-add-task')).toBeHidden();
 
     // Quadrant titles should be visible
     await expect(page.getByText('Do First')).toBeVisible();
@@ -16,4 +16,3 @@ test.describe('Mobile layout', () => {
     await expect(page.getByText('Eliminate')).toBeVisible();
   });
 });
-

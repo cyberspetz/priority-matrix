@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { DndContext, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, closestCorners } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 // import TaskCard from '@/components/TaskCard';
 import Quadrant from '@/components/Quadrant';
@@ -11,6 +11,7 @@ import ReportsSidebar from '@/components/ReportsSidebar';
 import SidebarNav from '@/components/SidebarNav';
 import TaskListItem from '@/components/TaskListItem';
 import TaskDetailSheet from '@/components/TaskDetailSheet';
+import InlineAddTaskRow from '@/components/InlineAddTaskRow';
 import PasswordProtection from '@/components/PasswordProtection';
 import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, completeTask, uncompleteTask, archiveTask, Task, TaskUpdatePayload } from '@/lib/supabaseClient';
 
@@ -375,6 +376,7 @@ export default function Home() {
             </button>
 
             <button
+              data-testid="header-add-task"
               onClick={() => setIsModalOpen(true)}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
             >
@@ -392,8 +394,8 @@ export default function Home() {
           </div>
         ) : (
           activeView === 'inbox' ? (
-            <DndContext onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 md:h-[calc(100vh-220px)]">
+            <DndContext collisionDetection={closestCorners} onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 md:h-[calc(100vh-220px)]">
                 <Quadrant
                   id="urgent-important"
                   title="Do First"
@@ -443,6 +445,7 @@ export default function Home() {
                   onArchiveTask={archiveTaskLocal}
                 />
               </div>
+              <InlineAddTaskRow className="mt-4" onAdd={async (value) => { await addTask(value); }} />
             </DndContext>
           ) : activeView === 'today' ? (
             <div className="space-y-3 w-full max-w-2xl mx-auto">
@@ -456,6 +459,7 @@ export default function Home() {
                   dueDate={t.due_date}
                   deadlineAt={t.deadline_at}
                   isCompleted={t.is_completed}
+                  priority={t.priority_level ?? 'p3'}
                   onToggleComplete={toggleTaskComplete}
                   onDelete={deleteTask}
                   onUpdate={updateTaskFields}
@@ -475,10 +479,11 @@ export default function Home() {
                       key={t.id}
                       id={t.id}
                       title={t.title}
-                      quadrant={t.quadrant}
-                      dueDate={t.due_date}
-                      deadlineAt={t.deadline_at}
-                      isCompleted={t.is_completed}
+                  quadrant={t.quadrant}
+                  dueDate={t.due_date}
+                  deadlineAt={t.deadline_at}
+                  isCompleted={t.is_completed}
+                  priority={t.priority_level ?? 'p3'}
                       onToggleComplete={toggleTaskComplete}
                       onDelete={deleteTask}
                       onUpdate={updateTaskFields}
@@ -496,10 +501,11 @@ export default function Home() {
                       key={t.id}
                       id={t.id}
                       title={t.title}
-                      quadrant={t.quadrant}
-                      dueDate={t.due_date}
-                      deadlineAt={t.deadline_at}
-                      isCompleted={t.is_completed}
+                  quadrant={t.quadrant}
+                  dueDate={t.due_date}
+                  deadlineAt={t.deadline_at}
+                  isCompleted={t.is_completed}
+                  priority={t.priority_level ?? 'p3'}
                       onToggleComplete={toggleTaskComplete}
                       onDelete={deleteTask}
                       onUpdate={updateTaskFields}
@@ -520,10 +526,11 @@ export default function Home() {
                       key={t.id}
                       id={t.id}
                       title={t.title}
-                      quadrant={t.quadrant}
-                      dueDate={t.due_date}
-                      deadlineAt={t.deadline_at}
-                      isCompleted={t.is_completed}
+                  quadrant={t.quadrant}
+                  dueDate={t.due_date}
+                  deadlineAt={t.deadline_at}
+                  isCompleted={t.is_completed}
+                  priority={t.priority_level ?? 'p3'}
                       onToggleComplete={toggleTaskComplete}
                       onDelete={deleteTask}
                       onUpdate={updateTaskFields}
@@ -544,10 +551,11 @@ export default function Home() {
                       key={t.id}
                       id={t.id}
                       title={t.title}
-                      quadrant={t.quadrant}
-                      dueDate={t.due_date}
-                      deadlineAt={t.deadline_at}
-                      isCompleted={t.is_completed}
+                  quadrant={t.quadrant}
+                  dueDate={t.due_date}
+                  deadlineAt={t.deadline_at}
+                  isCompleted={t.is_completed}
+                  priority={t.priority_level ?? 'p3'}
                       onToggleComplete={toggleTaskComplete}
                       onDelete={deleteTask}
                       onUpdate={updateTaskFields}

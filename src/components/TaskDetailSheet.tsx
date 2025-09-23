@@ -4,6 +4,7 @@ import { Transition } from '@headlessui/react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Task, TaskUpdatePayload } from '@/lib/supabaseClient';
+import { getPriorityMeta, PRIORITY_ORDER } from '@/lib/priority';
 
 interface TaskDetailSheetProps {
   task: Task | null;
@@ -20,13 +21,6 @@ const quadrantOptions: { value: Task['quadrant']; label: string; description: st
   { value: 'not-urgent-important', label: 'Not urgent · Important', description: 'Schedule' },
   { value: 'urgent-not-important', label: 'Urgent · Not important', description: 'Delegate' },
   { value: 'not-urgent-not-important', label: 'Not urgent · Not important', description: 'Eliminate' },
-];
-
-const priorityOptions: { value: Task['priority_level']; label: string; badge: string; tone: string }[] = [
-  { value: 'p1', label: 'P1 · Critical', badge: 'P1', tone: 'bg-rose-100 text-rose-700' },
-  { value: 'p2', label: 'P2 · High', badge: 'P2', tone: 'bg-amber-100 text-amber-700' },
-  { value: 'p3', label: 'P3 · Normal', badge: 'P3', tone: 'bg-blue-100 text-blue-700' },
-  { value: 'p4', label: 'P4 · Low', badge: 'P4', tone: 'bg-slate-100 text-slate-600' },
 ];
 
 const toISODate = (date: Date) => {
@@ -205,8 +199,13 @@ export default function TaskDetailSheet({ task, isOpen, onClose, onUpdate, onTog
         >
           <div className="p-3 space-y-2">
             <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-              {type === 'due' ? 'Set due date' : 'Set deadline'}
+              {type === 'due' ? 'Set schedule date' : 'Set deadline'}
             </div>
+            <p className="text-[11px] text-gray-500">
+              {type === 'due'
+                ? 'Schedule determines when you start working.'
+                : 'Deadlines are the last possible completion date.'}
+            </p>
             <div className="flex flex-wrap gap-2">
               {quickDates().map(({ label, value, tone }) => (
                 <button
@@ -335,58 +334,61 @@ export default function TaskDetailSheet({ task, isOpen, onClose, onUpdate, onTog
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="flex flex-col gap-2">
                       <span className="text-xs font-semibold uppercase text-gray-500">Quadrant</span>
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-1">
+                      <div className="grid grid-cols-2 gap-2">
                         {quadrantOptions.map((option) => (
                           <button
                             key={option.value}
                             type="button"
                             onClick={() => setQuadrant(option.value)}
-                            className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm transition ${
+                            className={`flex min-h-[64px] flex-col justify-center rounded-xl border px-3 py-2 text-left text-xs transition ${
                               quadrant === option.value
-                                ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                                ? 'border-blue-500 bg-blue-50/80 text-blue-700 shadow-sm'
                                 : 'border-gray-200 text-gray-700 hover:border-gray-300'
                             }`}
+                            aria-pressed={quadrant === option.value}
                           >
-                            <div className="flex flex-col text-left">
-                              <span className="font-medium">{option.label}</span>
-                              <span className="text-xs text-gray-500">{option.description}</span>
-                            </div>
-                            {quadrant === option.value && (
-                              <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
+                            <span className="text-sm font-semibold">{option.description}</span>
+                            <span className="mt-1 text-xs text-gray-500">{option.label}</span>
                           </button>
                         ))}
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
                       <span className="text-xs font-semibold uppercase text-gray-500">Priority</span>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-2">
-                        {priorityOptions.map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => setPriority(option.value)}
-                            className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm transition ${
-                              priority === option.value
-                                ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
-                                : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                            }`}
-                          >
-                            <span>{option.label}</span>
-                            <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-semibold ${option.tone}`}>
-                              {option.badge}
-                            </span>
-                          </button>
-                        ))}
+                      <div className="flex flex-wrap gap-2">
+                        {PRIORITY_ORDER.map((value) => {
+                          const meta = getPriorityMeta(value);
+                          const isActive = priority === value;
+                          return (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => setPriority(value)}
+                              className={`flex items-center gap-2 rounded-full px-3 py-2 text-xs font-medium transition ${
+                                isActive
+                                  ? `${meta.pillTone} shadow-sm`
+                                  : 'border border-gray-200 text-gray-600 hover:border-gray-300'
+                              }`}
+                              aria-pressed={isActive}
+                            >
+                              <span className={`h-2.5 w-2.5 rounded-full ${meta.dotFill}`} aria-hidden />
+                              <span className="text-sm font-semibold">
+                                {meta.flagLabel}
+                              </span>
+                              <span className="text-xs text-gray-500">{meta.name}</span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="flex flex-col gap-2">
-                      <span className="text-xs font-semibold uppercase text-gray-500">Due date</span>
+                      <div>
+                        <span className="text-xs font-semibold uppercase text-gray-500">Schedule</span>
+                        <p className="text-[11px] text-gray-500">When you plan to begin.</p>
+                      </div>
                       <button
                         ref={dueButtonRef}
                         type="button"
@@ -400,7 +402,10 @@ export default function TaskDetailSheet({ task, isOpen, onClose, onUpdate, onTog
                       </button>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <span className="text-xs font-semibold uppercase text-gray-500">Deadline</span>
+                      <div>
+                        <span className="text-xs font-semibold uppercase text-gray-500">Deadline</span>
+                        <p className="text-[11px] text-gray-500">Non-negotiable finish date.</p>
+                      </div>
                       <button
                         ref={deadlineButtonRef}
                         type="button"

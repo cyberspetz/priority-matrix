@@ -1,4 +1,18 @@
-import { useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+
+interface PasswordProtectionContextValue {
+  logout: () => void;
+}
+
+const PasswordProtectionContext = createContext<PasswordProtectionContextValue | undefined>(undefined);
+
+export const usePasswordProtection = () => {
+  const ctx = useContext(PasswordProtectionContext);
+  if (!ctx) {
+    throw new Error('usePasswordProtection must be used within PasswordProtection');
+  }
+  return ctx;
+};
 
 interface PasswordProtectionProps {
   children: React.ReactNode;
@@ -84,15 +98,8 @@ export default function PasswordProtection({ children }: PasswordProtectionProps
   }
 
   return (
-    <div>
+    <PasswordProtectionContext.Provider value={{ logout: handleLogout }}>
       {children}
-      {/* Logout button */}
-      <button
-        onClick={handleLogout}
-        className="fixed bottom-4 left-4 text-xs text-gray-500 hover:text-gray-700 bg-white/80 px-3 py-1 rounded-full shadow-sm"
-      >
-        Logout
-      </button>
-    </div>
+    </PasswordProtectionContext.Provider>
   );
 }

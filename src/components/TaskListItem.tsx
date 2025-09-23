@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
-import type { TaskUpdatePayload } from '@/lib/supabaseClient';
+import type { TaskPriority, TaskUpdatePayload } from '@/lib/supabaseClient';
+import { getPriorityMeta } from '@/lib/priority';
 
 interface TaskListItemProps {
   id: string;
@@ -9,6 +10,7 @@ interface TaskListItemProps {
   dueDate?: string;
   deadlineAt?: string;
   isCompleted: boolean;
+  priority: TaskPriority;
   onToggleComplete?: (id: string) => void;
   onDelete?: (id: string) => void;
   onUpdate?: (id: string, updates: TaskUpdatePayload) => void;
@@ -25,25 +27,43 @@ const quadrantAccent: Record<TaskListItemProps['quadrant'], string> = {
 
 function dueChip(due?: string) {
   if (!due) return null;
-  const today = new Date();
-  const date = new Date(due);
-  const localStr = (d: Date) => d.toISOString().split('T')[0];
-  const todayStr = localStr(new Date(today));
-  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-  const tomorrowStr = localStr(tomorrow);
 
-  if (date < new Date(todayStr)) return { text: 'Overdue', classes: 'text-rose-700 bg-rose-50' };
-  if (due === todayStr) return { text: 'Today', classes: 'text-emerald-700 bg-emerald-50' };
-  if (due === tomorrowStr) return { text: 'Tomorrow', classes: 'text-amber-700 bg-amber-50' };
-  return { text: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), classes: 'text-violet-700 bg-violet-50' };
+  const [datePart] = due.split('T');
+  const [year, month, day] = datePart.split('-').map(Number);
+  if (!year || !month || !day) return null;
+
+  const target = new Date(year, month - 1, day);
+
+  const localDateString = (source: Date) => {
+    const y = source.getFullYear();
+    const m = String(source.getMonth() + 1).padStart(2, '0');
+    const d = String(source.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const today = new Date();
+  const todayStr = localDateString(today);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const tomorrowStr = localDateString(tomorrow);
+
+  if (datePart < todayStr) return { text: 'Overdue', classes: 'text-rose-700 bg-rose-50' };
+  if (datePart === todayStr) return { text: 'Today', classes: 'text-emerald-700 bg-emerald-50' };
+  if (datePart === tomorrowStr) return { text: 'Tomorrow', classes: 'text-amber-700 bg-amber-50' };
+
+  return {
+    text: target.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    classes: 'text-violet-700 bg-violet-50',
+  };
 }
 
 import QuickScheduleMenu from './QuickScheduleMenu';
 import TaskActionMenu from './TaskActionMenu';
 
-export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt, isCompleted, onToggleComplete, onDelete, onUpdate, onOpenDetail, onArchive }: TaskListItemProps) {
-  const due = dueChip(dueDate);
+export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt, isCompleted, priority, onToggleComplete, onDelete, onUpdate, onOpenDetail, onArchive }: TaskListItemProps) {
+  const due = !isCompleted ? dueChip(dueDate) : null;
   const isDeadlineOver = deadlineAt ? new Date(deadlineAt) < new Date() : false;
+  const priorityMeta = getPriorityMeta(priority);
 
   return (
     <div
@@ -56,13 +76,20 @@ export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt,
         if (target?.closest('[data-skip-task-detail="true"]')) return;
         onOpenDetail(id);
       }}
+      onDoubleClick={(event) => {
+        if (!onOpenDetail) return;
+        const target = event.target as HTMLElement;
+        if (target?.closest('[data-skip-task-detail="true"]')) return;
+        event.preventDefault();
+        onOpenDetail(id);
+      }}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           onOpenDetail?.(id);
         }
       }}
-      className={`flex items-center gap-3 rounded-lg border ${quadrantAccent[quadrant]} border-l-4 bg-white p-3 transition-colors hover:border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}
+      className={`group flex flex-wrap items-start gap-3 rounded-lg border ${quadrantAccent[quadrant]} border-l-4 bg-white px-4 py-3 transition-colors hover:border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}
     >
       <button
         type="button"
@@ -71,7 +98,9 @@ export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt,
           event.stopPropagation();
           onToggleComplete?.(id);
         }}
-        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isCompleted ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 hover:border-emerald-400'}`}
+        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+          isCompleted ? `${priorityMeta.circleBorder} ${priorityMeta.completedFill}` : `${priorityMeta.circleBorder} ${priorityMeta.circleFill}`
+        }`}
         aria-label="Toggle complete"
       >
         {isCompleted && (
@@ -81,19 +110,32 @@ export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt,
 
       <div className="flex-1 min-w-0">
         <div className={`text-sm ${isCompleted ? 'line-through text-gray-400' : 'text-gray-900'}`}>{title}</div>
-        <div className="mt-1 flex items-center gap-2 text-xs">
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+          <span
+            data-priority-pill
+            data-priority-level={priority}
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${priorityMeta.badgeTone} ${priorityMeta.badgeText}`}
+          >
+            <svg className={`h-3 w-3 ${priorityMeta.iconFill}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+              <path d="M5 3a1 1 0 011-1h8a1 1 0 01.8 1.6L13.25 7l1.55 2.4A1 1 0 0114 11H6v6a1 1 0 11-2 0V3z" />
+            </svg>
+            {priorityMeta.flagLabel}
+          </span>
           {due && (
-            <span className={`px-2 py-0.5 rounded-full font-medium ${due.classes}`}>{due.text}</span>
+            <span title="Scheduled start" className={`px-2 py-0.5 rounded-full font-medium ${due.classes}`}>{due.text}</span>
           )}
-          {deadlineAt && (
-            <span className={`px-2 py-0.5 rounded-full font-medium ${isDeadlineOver ? 'text-rose-700 bg-rose-50' : 'text-slate-700 bg-slate-100'}`}>Deadline</span>
+          {deadlineAt && !isCompleted && (
+            <span title="Deadline" className={`px-2 py-0.5 rounded-full font-medium ${isDeadlineOver ? 'text-rose-700 bg-rose-50' : 'text-slate-700 bg-slate-100'}`}>Deadline</span>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-1" data-skip-task-detail="true">
+      <div
+        className="order-3 flex w-full items-center justify-end gap-1 pt-2 transition-opacity sm:order-none sm:w-auto sm:justify-normal sm:pt-0 sm:ml-auto md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+        data-skip-task-detail="true"
+      >
         {onUpdate && (
-          <QuickScheduleMenu id={id} dueDate={dueDate} deadlineAt={deadlineAt} onUpdate={onUpdate} />
+          <QuickScheduleMenu id={id} dueDate={dueDate} deadlineAt={deadlineAt} priority={priority} onUpdate={onUpdate} />
         )}
         {(onArchive || onDelete || onOpenDetail) && (
           <TaskActionMenu id={id} title={title} onArchive={onArchive} onDelete={onDelete} onOpenDetail={onOpenDetail} />
