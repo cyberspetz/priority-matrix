@@ -1,6 +1,6 @@
 "use client";
 import { Transition } from '@headlessui/react';
-import React, { Fragment, useEffect, useRef, useState } from 'react';
+import React, { Fragment, forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { TaskPriority, TaskUpdatePayload } from '@/lib/supabaseClient';
 import { getPriorityMeta, PRIORITY_ORDER } from '@/lib/priority';
@@ -13,12 +13,52 @@ interface QuickScheduleMenuProps {
   onUpdate: (id: string, updates: TaskUpdatePayload) => void;
 }
 
-export default function QuickScheduleMenu({ id, dueDate, deadlineAt, priority, onUpdate }: QuickScheduleMenuProps) {
+export interface QuickScheduleMenuHandle {
+  open: () => void;
+  close: () => void;
+}
+
+const QuickScheduleMenu = forwardRef<QuickScheduleMenuHandle, QuickScheduleMenuProps>(function QuickScheduleMenu(
+  { id, dueDate, deadlineAt, priority, onUpdate },
+  ref
+) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<{ top?: number; bottom?: number; left: number; openUp?: boolean }>({ left: 0, top: 0 });
   const btnRef = useRef<HTMLButtonElement | null>(null);
+
+  const openMenu = useCallback(() => {
+    const el = btnRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const menuWidth = 280;
+    const menuHeight = 420;
+    const margin = 8;
+    const viewportWidth = window.innerWidth;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
+    const maxLeft = Math.max(margin, viewportWidth - menuWidth - margin);
+    const left = Math.min(Math.max(margin, rect.left), maxLeft);
+
+    if (openUp) {
+      const bottom = Math.max(margin, window.innerHeight - rect.top + margin);
+      setCoords({ bottom, left, openUp: true });
+    } else {
+      const top = Math.max(margin, rect.bottom + margin);
+      setCoords({ top, left, openUp: false });
+    }
+    setOpen(true);
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    setOpen(false);
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    open: openMenu,
+    close: closeMenu,
+  }), [openMenu, closeMenu]);
 
   const localDateString = (d: Date) => {
     const y = d.getFullYear();
@@ -34,7 +74,7 @@ export default function QuickScheduleMenu({ id, dueDate, deadlineAt, priority, o
       onUpdate(id, { due_date: dateStr });
     }
     setShowDatePicker(false);
-    setOpen(false);
+    closeMenu();
   };
 
   const setDeadline = (value?: string | null) => {
@@ -44,12 +84,12 @@ export default function QuickScheduleMenu({ id, dueDate, deadlineAt, priority, o
       onUpdate(id, { deadline_at: value });
     }
     setShowDeadlinePicker(false);
-    setOpen(false);
+    closeMenu();
   };
 
   const setPriorityLevel = (value: TaskPriority) => {
     onUpdate(id, { priority_level: value });
-    setOpen(false);
+    closeMenu();
   };
 
   const today = new Date();
@@ -358,29 +398,6 @@ export default function QuickScheduleMenu({ id, dueDate, deadlineAt, priority, o
     return () => { document.removeEventListener('keydown', onKey); };
   }, [open]);
 
-  const openMenu = () => {
-    const el = btnRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const menuWidth = 280;
-    const menuHeight = 420;
-    const margin = 8;
-    const viewportWidth = window.innerWidth;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
-    const maxLeft = Math.max(margin, viewportWidth - menuWidth - margin);
-    const left = Math.min(Math.max(margin, rect.left), maxLeft);
-
-    if (openUp) {
-      const bottom = Math.max(margin, window.innerHeight - rect.top + margin);
-      setCoords({ bottom, left, openUp: true });
-    } else {
-      const top = Math.max(margin, rect.bottom + margin);
-      setCoords({ top, left, openUp: false });
-    }
-    setOpen(true);
-  };
-
   return (
     <div className="relative inline-block text-left">
       <button
@@ -398,8 +415,8 @@ export default function QuickScheduleMenu({ id, dueDate, deadlineAt, priority, o
       </button>
       {typeof window !== 'undefined' && open ? createPortal(
         <div
-          onClick={() => setOpen(false)}
-          onPointerDown={() => setOpen(false)}
+          onClick={closeMenu}
+          onPointerDown={closeMenu}
           style={{ position: 'fixed', inset: 0, zIndex: 99998 }}
         >
           {Panel}
@@ -408,4 +425,6 @@ export default function QuickScheduleMenu({ id, dueDate, deadlineAt, priority, o
       ) : null}
     </div>
   );
-}
+});
+
+export default QuickScheduleMenu;

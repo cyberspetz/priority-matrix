@@ -11,7 +11,6 @@ import ReportsSidebar from '@/components/ReportsSidebar';
 import SidebarNav from '@/components/SidebarNav';
 import TaskListItem from '@/components/TaskListItem';
 import TaskDetailSheet from '@/components/TaskDetailSheet';
-import InlineAddTaskRow from '@/components/InlineAddTaskRow';
 import PasswordProtection from '@/components/PasswordProtection';
 import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, completeTask, uncompleteTask, archiveTask, Task, TaskUpdatePayload } from '@/lib/supabaseClient';
 
@@ -131,83 +130,63 @@ export default function Home() {
     const activeId = String(active.id);
     const overId = String(over.id);
 
-    // Determine containers (quadrants)
     type SortableMeta = { sortable?: { containerId?: Task['quadrant'] } } | undefined;
     const activeContainer = (active.data.current as SortableMeta)?.sortable?.containerId;
     const overContainer = (over.data.current as SortableMeta)?.sortable?.containerId || (overId as Task['quadrant']);
 
-    if (!overContainer) return;
-
     const sourceQuadrant = activeContainer || tasks.find(t => t.id === activeId)?.quadrant;
     const targetQuadrant = overContainer;
 
-    // Compute indices within their respective lists
-    const sourceList = getTasksByQuadrant(sourceQuadrant!);
-    const targetList = getTasksByQuadrant(targetQuadrant);
-    const oldIndex = sourceList.findIndex(t => t.id === activeId);
-    const overIndex = targetList.findIndex(t => t.id === overId);
-    const newIndex = overIndex >= 0 ? overIndex : targetList.length; // append if dropped on container
+    if (!sourceQuadrant || !targetQuadrant) return;
 
+    const sortByIndex = (a: Task, b: Task) => (a.sort_index ?? 0) - (b.sort_index ?? 0);
+
+    const currentTasks = tasks;
+    const sourceList = currentTasks.filter(t => t.quadrant === sourceQuadrant).sort(sortByIndex);
+    const targetList = sourceQuadrant === targetQuadrant
+      ? sourceList
+      : currentTasks.filter(t => t.quadrant === targetQuadrant).sort(sortByIndex);
+
+    const oldIndex = sourceList.findIndex(task => task.id === activeId);
     if (oldIndex === -1) return;
 
+    const overIndex = targetList.findIndex(task => task.id === overId);
+    const newIndex = overIndex >= 0 ? overIndex : targetList.length;
+
+    const updates = new Map<string, TaskUpdatePayload>();
+    const queueUpdate = (id: string, payload: TaskUpdatePayload) => {
+      const existing = updates.get(id) ?? {};
+      updates.set(id, { ...existing, ...payload });
+    };
+
+    if (sourceQuadrant === targetQuadrant) {
+      const boundedIndex = Math.min(Math.max(newIndex, 0), Math.max(sourceList.length - 1, 0));
+      if (oldIndex === boundedIndex) return;
+
+      const reorderedIds = arrayMove(sourceList.map(task => task.id), oldIndex, boundedIndex);
+      reorderedIds.forEach((id, idx) => queueUpdate(id, { sort_index: idx }));
+    } else {
+      const remainingSourceIds = sourceList.filter(task => task.id !== activeId).map(task => task.id);
+      remainingSourceIds.forEach((id, idx) => queueUpdate(id, { sort_index: idx }));
+
+      const targetIds = targetList.map(task => task.id);
+      const insertAt = Math.min(Math.max(newIndex, 0), targetIds.length);
+      targetIds.splice(insertAt, 0, activeId);
+      targetIds.forEach((id, idx) => queueUpdate(id, { sort_index: idx }));
+      queueUpdate(activeId, { quadrant: targetQuadrant });
+    }
+
+    const nextTasks = currentTasks.map(task => {
+      const pending = updates.get(task.id);
+      return pending ? { ...task, ...pending } : task;
+    });
+
     try {
-      setTasks(prev => {
-        let next = [...prev];
+      setTasks(nextTasks);
 
-        // Remove from source
-        const movingTask = next.find(t => t.id === activeId);
-        if (!movingTask) return prev;
+      if (updates.size === 0) return;
 
-        // Build new lists
-        const newSourceList = sourceList.filter(t => t.id !== activeId);
-        const newTargetList = targetList.slice();
-
-        if (sourceQuadrant === targetQuadrant) {
-          // Reorder within the same quadrant
-          const currentOrder = sourceList.map(t => t.id);
-          const reordered = arrayMove(currentOrder, oldIndex, newIndex);
-          // Apply new indices
-          next = next.map(t => {
-            if (t.quadrant !== sourceQuadrant) return t;
-            const idx = reordered.indexOf(t.id);
-            return { ...t, sort_index: idx } as Task;
-          });
-        } else {
-          // Move across quadrants
-          newTargetList.splice(newIndex, 0, movingTask);
-          // Reindex both affected quadrants
-          next = next.map(t => {
-            if (t.id === movingTask.id) {
-              return { ...t, quadrant: targetQuadrant, sort_index: newIndex } as Task;
-            }
-            if (t.quadrant === sourceQuadrant) {
-              const idx = newSourceList.findIndex(x => x.id === t.id);
-              return { ...t, sort_index: idx } as Task;
-            }
-            if (t.quadrant === targetQuadrant) {
-              const idx = newTargetList.findIndex(x => x.id === t.id);
-              return { ...t, sort_index: idx } as Task;
-            }
-            return t;
-          });
-        }
-
-        return next;
-      });
-
-      // Persist changes to Supabase: update moved item quadrant and reindex sort_index for affected quadrant(s)
-      const after = getTasksByQuadrant(targetQuadrant).map((t, idx) => ({ id: t.id, sort_index: idx }));
-      const affected: { id: string; updates: Partial<Task> }[] = [];
-
-      if (sourceQuadrant === targetQuadrant) {
-        for (const { id, sort_index } of after) affected.push({ id, updates: { sort_index } });
-      } else {
-        const afterSource = getTasksByQuadrant(sourceQuadrant!).map((t, idx) => ({ id: t.id, sort_index: idx }));
-        for (const { id, sort_index } of after) affected.push({ id, updates: { quadrant: targetQuadrant as Task['quadrant'], sort_index } });
-        for (const { id, sort_index } of afterSource) affected.push({ id, updates: { sort_index } });
-      }
-
-      await Promise.all(affected.map(a => updateTask(a.id, a.updates)));
+      await Promise.all(Array.from(updates.entries()).map(([id, payload]) => updateTask(id, payload)));
     } catch (error) {
       console.error('Failed to apply drag reorder:', error);
       const fetchedTasks = await getAllTasks();
@@ -395,7 +374,7 @@ export default function Home() {
         ) : (
           activeView === 'inbox' ? (
             <DndContext collisionDetection={closestCorners} onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd}>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 md:h-[calc(100vh-220px)]">
+              <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 md:mt-0 md:gap-6 md:h-[calc(100vh-220px)]">
                 <Quadrant
                   id="urgent-important"
                   title="Do First"
@@ -445,10 +424,9 @@ export default function Home() {
                   onArchiveTask={archiveTaskLocal}
                 />
               </div>
-              <InlineAddTaskRow className="mt-4" onAdd={async (value) => { await addTask(value); }} />
             </DndContext>
           ) : activeView === 'today' ? (
-            <div className="space-y-3 w-full max-w-2xl mx-auto">
+            <div className="mt-12 space-y-3 w-full max-w-2xl mx-auto md:mt-0">
               {todayTasks.length === 0 && <div className="text-sm text-gray-500">No tasks for today.</div>}
               {todayTasks.map(t => (
                 <TaskListItem
@@ -469,7 +447,7 @@ export default function Home() {
               ))}
             </div>
           ) : (
-            <div className="space-y-6 w-full max-w-2xl mx-auto">
+            <div className="mt-12 space-y-6 w-full max-w-2xl mx-auto md:mt-0">
               {/* Upcoming: groups */}
               <div>
                 <div className="text-xs font-semibold text-slate-600 mb-2">Today</div>

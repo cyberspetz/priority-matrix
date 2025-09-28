@@ -89,57 +89,61 @@ export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt,
           onOpenDetail?.(id);
         }
       }}
-      className={`group flex flex-wrap items-start gap-2 rounded-xl border ${quadrantAccent[quadrant]} border-l-4 bg-white/95 px-3 py-2 shadow-sm transition-colors md:px-4 md:py-3 md:shadow-none hover:border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}
+      className={`group flex flex-wrap items-start gap-2 border-b border-gray-200/70 bg-transparent px-2 py-2 transition-colors hover:border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:rounded-xl md:border md:${quadrantAccent[quadrant]} md:border-l-4 md:bg-white/95 md:px-4 md:py-3 md:shadow-none`}
     >
-      <button
-        type="button"
-        data-skip-task-detail="true"
-        onClick={(event) => {
-          event.stopPropagation();
-          onToggleComplete?.(id);
-        }}
-        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-          isCompleted ? `${priorityMeta.circleBorder} ${priorityMeta.completedFill}` : `${priorityMeta.circleBorder} ${priorityMeta.circleFill}`
-        }`}
-        aria-label="Toggle complete"
-      >
-        {isCompleted && (
-          <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>
-        )}
-      </button>
-
-      <div className="flex-1 min-w-0">
-        <div className={`text-[0.95rem] md:text-sm ${isCompleted ? 'line-through text-gray-400' : 'text-gray-900'}`}>{title}</div>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[0.7rem] md:text-xs">
-          <span
-            data-priority-pill
-            data-priority-level={priority}
-            className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${priorityMeta.badgeTone} ${priorityMeta.badgeText}`}
+      <div className="flex w-full items-start justify-between gap-2">
+        <div className="flex items-start gap-2">
+          <button
+            type="button"
+            data-skip-task-detail="true"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleComplete?.(id);
+            }}
+            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+              isCompleted ? `${priorityMeta.circleBorder} ${priorityMeta.completedFill}` : `${priorityMeta.circleBorder} ${priorityMeta.circleFill}`
+            }`}
+            aria-label="Toggle complete"
           >
-            <svg className={`h-[0.65rem] w-[0.65rem] ${priorityMeta.iconFill}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-              <path d="M5 3a1 1 0 011-1h8a1 1 0 01.8 1.6L13.25 7l1.55 2.4A1 1 0 0114 11H6v6a1 1 0 11-2 0V3z" />
-            </svg>
-            {priorityMeta.flagLabel}
-          </span>
-          {due && (
-            <span title="Scheduled start" className={`px-2 py-0.5 rounded-full font-medium ${due.classes}`}>{due.text}</span>
+            {isCompleted && (
+              <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>
+            )}
+          </button>
+
+          <div className="flex-1 min-w-0 space-y-0.5">
+            <div className={`text-[0.95rem] md:text-sm ${isCompleted ? 'line-through text-gray-400' : 'text-gray-900'}`}>{title}</div>
+            <div className="flex flex-wrap items-center gap-1.5 text-[0.7rem] md:text-xs">
+              <span
+                data-priority-pill
+                data-priority-level={priority}
+                className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${priorityMeta.badgeTone} ${priorityMeta.badgeText}`}
+              >
+                <svg className={`h-[0.65rem] w-[0.65rem] ${priorityMeta.iconFill}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                  <path d="M5 3a1 1 0 011-1h8a1 1 0 01.8 1.6L13.25 7l1.55 2.4A1 1 0 0114 11H6v6a1 1 0 11-2 0V3z" />
+                </svg>
+                {priorityMeta.flagLabel}
+              </span>
+              {due && (
+                <span title="Scheduled start" className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${due.classes}`}>{due.text}</span>
+              )}
+              {deadlineAt && !isCompleted && (
+                <span title="Deadline" className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${isDeadlineOver ? 'text-rose-700 bg-rose-50' : 'text-slate-700 bg-slate-100'}`}>Deadline</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="flex items-start gap-1 opacity-0 transition-opacity duration-150 group-active:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
+          data-skip-task-detail="true"
+        >
+          {onUpdate && (
+            <QuickScheduleMenu id={id} dueDate={dueDate} deadlineAt={deadlineAt} priority={priority} onUpdate={onUpdate} />
           )}
-          {deadlineAt && !isCompleted && (
-            <span title="Deadline" className={`px-2 py-0.5 rounded-full font-medium ${isDeadlineOver ? 'text-rose-700 bg-rose-50' : 'text-slate-700 bg-slate-100'}`}>Deadline</span>
+          {(onArchive || onDelete || onOpenDetail) && (
+            <TaskActionMenu id={id} title={title} onArchive={onArchive} onDelete={onDelete} onOpenDetail={onOpenDetail} />
           )}
         </div>
-      </div>
-
-      <div
-        className="order-3 flex w-full items-center justify-end gap-1 pt-2 transition-opacity sm:order-none sm:w-auto sm:justify-normal sm:pt-0 sm:ml-auto md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
-        data-skip-task-detail="true"
-      >
-        {onUpdate && (
-          <QuickScheduleMenu id={id} dueDate={dueDate} deadlineAt={deadlineAt} priority={priority} onUpdate={onUpdate} />
-        )}
-        {(onArchive || onDelete || onOpenDetail) && (
-          <TaskActionMenu id={id} title={title} onArchive={onArchive} onDelete={onDelete} onOpenDetail={onOpenDetail} />
-        )}
       </div>
     </div>
   );

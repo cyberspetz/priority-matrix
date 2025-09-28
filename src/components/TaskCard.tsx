@@ -1,8 +1,8 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import QuickScheduleMenu from './QuickScheduleMenu';
+import QuickScheduleMenu, { type QuickScheduleMenuHandle } from './QuickScheduleMenu';
 import TaskActionMenu from './TaskActionMenu';
-import { useEffect, useState, type CSSProperties, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
 import type { TaskPriority, TaskUpdatePayload } from '@/lib/supabaseClient';
 import { getPriorityMeta } from '@/lib/priority';
 
@@ -22,6 +22,7 @@ interface TaskCardProps {
 
 export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, priority, onDelete, onToggleComplete, onArchive, onOpenDetail, onUpdate }: TaskCardProps) {
   const [mounted, setMounted] = useState(false);
+  const quickMenuRef = useRef<QuickScheduleMenuHandle | null>(null);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
@@ -66,6 +67,16 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
   const dueDateInfo = !isCompleted ? getDueDateInfo() : null;
   const isDeadlineOver = deadlineAt ? new Date(deadlineAt) < new Date() : false;
   const priorityMeta = getPriorityMeta(priority);
+
+  const openQuickMenu = () => {
+    quickMenuRef.current?.open();
+  };
+
+  const handleQuickMenuClick = (event: MouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openQuickMenu();
+  };
 
   const style: CSSProperties = {
     transform: transform ? CSS.Transform.toString(transform) : undefined,
@@ -134,36 +145,54 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
             {title}
           </p>
           <div className="flex flex-wrap items-center gap-1.5 text-[0.7rem] md:text-xs">
-            <span
+            <button
+              type="button"
               data-priority-pill
               data-priority-level={priority}
+              onClick={handleQuickMenuClick}
+              onPointerDown={(event) => event.stopPropagation()}
+              onTouchStart={(event) => event.stopPropagation()}
               className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${priorityMeta.badgeTone} ${priorityMeta.badgeText}`}
+              aria-label={`Change priority (${priorityMeta.flagLabel})`}
             >
               <svg className={`h-[0.65rem] w-[0.65rem] ${priorityMeta.iconFill}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
                 <path d="M5 3a1 1 0 011-1h8a1 1 0 01.8 1.6L13.25 7l1.55 2.4A1 1 0 0114 11H6v6a1 1 0 11-2 0V3z" />
               </svg>
               {priorityMeta.flagLabel}
-            </span>
+            </button>
             {dueDateInfo && (
-              <div
+              <button
+                type="button"
+                onClick={handleQuickMenuClick}
+                onPointerDown={(event) => event.stopPropagation()}
+                onTouchStart={(event) => event.stopPropagation()}
                 title="Scheduled start"
                 className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${dueDateInfo.bgColor} ${dueDateInfo.color}`}
+                aria-label={`Adjust schedule (${dueDateInfo.text})`}
               >
-                <svg className="h-[0.7rem] w-[0.7rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-[0.7rem] w-[0.7rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 {dueDateInfo.text}
-              </div>
+              </button>
             )}
             {deadlineAt && !isCompleted && (
-              <div title="Deadline" className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                isDeadlineOver ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-700'
-              }`}>
-                <svg className="mr-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button
+                type="button"
+                onClick={handleQuickMenuClick}
+                onPointerDown={(event) => event.stopPropagation()}
+                onTouchStart={(event) => event.stopPropagation()}
+                title="Deadline"
+                className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${
+                  isDeadlineOver ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-700'
+                }`}
+                aria-label="Adjust deadline"
+              >
+                <svg className="h-[0.7rem] w-[0.7rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3" />
                 </svg>
                 Deadline
-              </div>
+              </button>
             )}
           </div>
         </div>
@@ -172,7 +201,16 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
           className="order-3 flex w-full items-center justify-end gap-1 pt-1 transition-opacity sm:order-none sm:w-auto sm:justify-normal sm:pt-0 sm:ml-auto md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
           data-skip-task-detail="true"
         >
-          {onUpdate && <QuickScheduleMenu id={id} dueDate={dueDate} deadlineAt={deadlineAt} priority={priority} onUpdate={onUpdate} />}
+          {onUpdate && (
+            <QuickScheduleMenu
+              ref={quickMenuRef}
+              id={id}
+              dueDate={dueDate}
+              deadlineAt={deadlineAt}
+              priority={priority}
+              onUpdate={onUpdate}
+            />
+          )}
           {(onArchive || onDelete || onOpenDetail) && (
             <TaskActionMenu id={id} title={title} onArchive={onArchive} onDelete={onDelete} onOpenDetail={onOpenDetail} />
           )}

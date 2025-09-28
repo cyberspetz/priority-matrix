@@ -44,7 +44,7 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
   return (
     <div
       ref={setNodeRef}
-      className={getQuadrantStyles()}
+      className={`${getQuadrantStyles()} max-w-md mx-auto md:mx-0 md:max-w-none`}
     >
       {/* Header */}
       <div className="mb-4 md:mb-6">
