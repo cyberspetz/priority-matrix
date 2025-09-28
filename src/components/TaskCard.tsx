@@ -68,14 +68,16 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
   const isDeadlineOver = deadlineAt ? new Date(deadlineAt) < new Date() : false;
   const priorityMeta = getPriorityMeta(priority);
 
-  const openQuickMenu = () => {
-    quickMenuRef.current?.open();
+  const openQuickMenu = (anchor?: HTMLElement | null) => {
+    if (!quickMenuRef.current) return;
+    const rect = anchor?.getBoundingClientRect();
+    quickMenuRef.current.open(rect);
   };
 
   const handleQuickMenuClick = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    openQuickMenu();
+    openQuickMenu(event.currentTarget);
   };
 
   const style: CSSProperties = {

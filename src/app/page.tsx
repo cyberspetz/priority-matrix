@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { DndContext, DragEndEvent, closestCorners } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, PointerSensor, TouchSensor, closestCorners, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 // import TaskCard from '@/components/TaskCard';
 import Quadrant from '@/components/Quadrant';
@@ -39,6 +39,11 @@ export default function Home() {
   const [dragData, setDragData] = useState<{ isDragging: boolean; position?: { x: number; y: number } }>({
     isDragging: false
   });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } })
+  );
 
   // Fluid effect configuration with enhanced default settings
   const [fluidConfig] = useState<FluidConfig>({
@@ -373,7 +378,7 @@ export default function Home() {
           </div>
         ) : (
           activeView === 'inbox' ? (
-            <DndContext collisionDetection={closestCorners} onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd}>
+            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd}>
               <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 md:mt-0 md:gap-6 md:h-[calc(100vh-220px)]">
                 <Quadrant
                   id="urgent-important"

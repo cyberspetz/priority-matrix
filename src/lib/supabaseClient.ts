@@ -135,25 +135,27 @@ export const getTasksByStatus = async (status: TaskStatus): Promise<Task[]> => {
   return data || [];
 };
 
-// Get completed tasks for reporting
-export const getCompletedTasks = async (startDate?: string, endDate?: string): Promise<Task[]> => {
+// Get completed tasks for reporting (includes archived items with a completion timestamp)
+export const getCompletedTasks = async (startDate?: string, endDateExclusive?: string): Promise<Task[]> => {
   if (DEMO) {
-    let data = memTasks.filter(t => t.status === 'completed');
+    let data = memTasks.filter(t => t.completed_at && (t.status === 'completed' || t.status === 'archived'));
     if (startDate) data = data.filter(t => t.completed_at && t.completed_at >= startDate);
-    if (endDate) data = data.filter(t => t.completed_at && t.completed_at <= endDate);
-    return data.sort((a,b)=> (b.completed_at! > a.completed_at! ? -1:1));
+    if (endDateExclusive) data = data.filter(t => t.completed_at && t.completed_at < endDateExclusive);
+    return data.sort((a, b) => ((b.completed_at ?? '') > (a.completed_at ?? '') ? -1 : 1));
   }
+
   let query = supabase
     .from('tasks')
     .select('*')
-    .eq('status', 'completed')
+    .in('status', ['completed', 'archived'])
+    .not('completed_at', 'is', null)
     .order('completed_at', { ascending: false });
 
   if (startDate) {
     query = query.gte('completed_at', startDate);
   }
-  if (endDate) {
-    query = query.lte('completed_at', endDate);
+  if (endDateExclusive) {
+    query = query.lt('completed_at', endDateExclusive);
   }
 
   const { data, error } = await query;

@@ -1,6 +1,15 @@
 "use client";
+
 import { Transition } from '@headlessui/react';
-import React, { Fragment, forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, {
+  Fragment,
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import type { TaskPriority, TaskUpdatePayload } from '@/lib/supabaseClient';
 import { getPriorityMeta, PRIORITY_ORDER } from '@/lib/priority';
@@ -14,9 +23,22 @@ interface QuickScheduleMenuProps {
 }
 
 export interface QuickScheduleMenuHandle {
-  open: () => void;
+  open: (anchorRect?: DOMRect) => void;
   close: () => void;
 }
+
+type PanelMode = 'popover' | 'sheet';
+
+interface PanelLayout {
+  top?: number;
+  bottom?: number;
+  left: number;
+  width: number;
+}
+
+const SHEET_BREAKPOINT = 768;
+const MAX_POPOVER_WIDTH = 320;
+const MAX_SHEET_WIDTH = 360;
 
 const QuickScheduleMenu = forwardRef<QuickScheduleMenuHandle, QuickScheduleMenuProps>(function QuickScheduleMenu(
   { id, dueDate, deadlineAt, priority, onUpdate },
@@ -25,40 +47,72 @@ const QuickScheduleMenu = forwardRef<QuickScheduleMenuHandle, QuickScheduleMenuP
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
   const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState<{ top?: number; bottom?: number; left: number; openUp?: boolean }>({ left: 0, top: 0 });
+  const [mode, setMode] = useState<PanelMode>('popover');
+  const [coords, setCoords] = useState<PanelLayout>({ left: 0, width: MAX_POPOVER_WIDTH });
+  const [maxHeight, setMaxHeight] = useState(420);
   const btnRef = useRef<HTMLButtonElement | null>(null);
 
-  const openMenu = useCallback(() => {
-    const el = btnRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const menuWidth = 280;
-    const menuHeight = 420;
-    const margin = 8;
-    const viewportWidth = window.innerWidth;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
-    const maxLeft = Math.max(margin, viewportWidth - menuWidth - margin);
-    const left = Math.min(Math.max(margin, rect.left), maxLeft);
+  const computeLayout = useCallback((anchorRect?: DOMRect | null) => {
+    if (typeof window === 'undefined') return false;
 
-    if (openUp) {
-      const bottom = Math.max(margin, window.innerHeight - rect.top + margin);
-      setCoords({ bottom, left, openUp: true });
-    } else {
-      const top = Math.max(margin, rect.bottom + margin);
-      setCoords({ top, left, openUp: false });
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const margin = 12;
+    const panelWidth = Math.min(
+      viewportWidth - margin * 2,
+      viewportWidth < SHEET_BREAKPOINT ? MAX_SHEET_WIDTH : MAX_POPOVER_WIDTH
+    );
+    const estimatedHeight = 460;
+    const nextMaxHeight = Math.min(estimatedHeight, viewportHeight - margin * 2);
+    setMaxHeight(nextMaxHeight);
+
+    if (viewportWidth < SHEET_BREAKPOINT) {
+      setMode('sheet');
+      setCoords({
+        bottom: margin,
+        left: Math.max(margin, (viewportWidth - panelWidth) / 2),
+        width: panelWidth,
+      });
+      return true;
     }
-    setOpen(true);
+
+    const fallbackRect = btnRef.current?.getBoundingClientRect();
+    const anchor = anchorRect ?? fallbackRect;
+    if (!anchor) return false;
+
+    let top = anchor.bottom + margin;
+    let left = anchor.left + anchor.width / 2 - panelWidth / 2;
+    left = Math.max(margin, Math.min(left, viewportWidth - panelWidth - margin));
+
+    if (top + nextMaxHeight > viewportHeight - margin) {
+      const openUpTop = anchor.top - margin - nextMaxHeight;
+      if (openUpTop >= margin) {
+        top = openUpTop;
+      } else {
+        top = Math.max(margin, viewportHeight - nextMaxHeight - margin);
+      }
+    }
+
+    setMode('popover');
+    setCoords({ top, left, width: panelWidth });
+    return true;
   }, []);
+
+  const openMenu = useCallback((anchorRect?: DOMRect) => {
+    if (!computeLayout(anchorRect)) return;
+    setOpen(true);
+  }, [computeLayout]);
 
   const closeMenu = useCallback(() => {
     setOpen(false);
+    setShowDatePicker(false);
+    setShowDeadlinePicker(false);
   }, []);
 
   useImperativeHandle(ref, () => ({
-    open: openMenu,
+    open: (anchorRect?: DOMRect) => openMenu(anchorRect),
     close: closeMenu,
-  }), [openMenu, closeMenu]);
+  }), [closeMenu, openMenu]);
 
   const localDateString = (d: Date) => {
     const y = d.getFullYear();
@@ -187,15 +241,14 @@ const QuickScheduleMenu = forwardRef<QuickScheduleMenuHandle, QuickScheduleMenuP
     },
   ];
 
-  // Portal content
   const Panel = (
     <Transition
       as={Fragment}
       show={open}
-      enter="transition ease-out duration-100"
+      enter="transition ease-out duration-120"
       enterFrom="transform opacity-0 scale-95"
       enterTo="transform opacity-100 scale-100"
-      leave="transition ease-in duration-75"
+      leave="transition ease-in duration-100"
       leaveFrom="transform opacity-100 scale-100"
       leaveTo="transform opacity-0 scale-95"
     >
@@ -203,16 +256,38 @@ const QuickScheduleMenu = forwardRef<QuickScheduleMenuHandle, QuickScheduleMenuP
         data-testid="qs-menu"
         style={{
           position: 'fixed',
-          top: coords.openUp ? undefined : coords.top,
-          bottom: coords.openUp ? coords.bottom : undefined,
+          top: mode === 'popover' ? coords.top : undefined,
+          bottom: mode === 'sheet' ? coords.bottom : undefined,
           left: coords.left,
+          width: coords.width,
+          maxHeight,
+          height: mode === 'sheet' ? maxHeight : undefined,
           zIndex: 99999,
         }}
-        className="w-[280px] rounded-xl border border-gray-100 bg-white shadow-xl ring-1 ring-black/5 focus:outline-none"
-        onPointerDown={(e) => { e.stopPropagation(); }}
-        onClick={(e) => e.stopPropagation()}
+        className={`flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl ring-1 ring-black/5 focus:outline-none ${
+          mode === 'sheet' ? 'rounded-3xl' : ''
+        }`}
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
       >
-        <div className="p-4 space-y-4">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white/95 px-4 py-3">
+          <div className="flex flex-col leading-tight">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Quick planner</span>
+            <span className="text-sm text-gray-700">Adjust schedule & priority</span>
+          </div>
+          <button
+            type="button"
+            onClick={closeMenu}
+            className="rounded-full p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+            aria-label="Close quick planner"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-4">
           <section className="space-y-2">
             <div className="text-xs font-semibold uppercase text-gray-500">Priority</div>
             <div className="flex flex-wrap gap-2">
@@ -225,6 +300,7 @@ const QuickScheduleMenu = forwardRef<QuickScheduleMenuHandle, QuickScheduleMenuP
                     type="button"
                     data-testid={`qs-priority-${value}`}
                     onMouseDown={(event) => { event.preventDefault(); event.stopPropagation(); setPriorityLevel(value); }}
+                    onClick={(event) => { event.preventDefault(); event.stopPropagation(); setPriorityLevel(value); }}
                     className={`flex items-center gap-2 rounded-full px-3 py-2 text-xs font-medium transition ${
                       isActive ? `${meta.pillTone} shadow-sm` : 'border border-gray-200 text-gray-600 hover:border-gray-300'
                     }`}
@@ -253,7 +329,8 @@ const QuickScheduleMenu = forwardRef<QuickScheduleMenuHandle, QuickScheduleMenuP
                     type="button"
                     data-testid={option.testId}
                     onMouseDown={(event) => { event.preventDefault(); event.stopPropagation(); setDue(option.value); }}
-                    className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition ${
+                    onClick={(event) => { event.preventDefault(); event.stopPropagation(); setDue(option.value); }}
+                    className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition ${
                       isActive ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-700 hover:border-gray-300'
                     }`}
                   >
@@ -289,7 +366,12 @@ const QuickScheduleMenu = forwardRef<QuickScheduleMenuHandle, QuickScheduleMenuP
                     }
                   }}
                 />
-                <button type="button" className="text-xs text-gray-500" onMouseDown={(event) => { event.preventDefault(); event.stopPropagation(); setShowDatePicker(false); }}>
+                <button
+                  type="button"
+                  className="text-xs text-gray-500"
+                  onMouseDown={(event) => { event.preventDefault(); event.stopPropagation(); setShowDatePicker(false); }}
+                  onClick={(event) => { event.preventDefault(); event.stopPropagation(); setShowDatePicker(false); }}
+                >
                   Cancel
                 </button>
               </div>
@@ -298,6 +380,7 @@ const QuickScheduleMenu = forwardRef<QuickScheduleMenuHandle, QuickScheduleMenuP
                 type="button"
                 data-testid="qs-pick-date"
                 onMouseDown={(event) => { event.preventDefault(); event.stopPropagation(); setShowDatePicker(true); }}
+                onClick={(event) => { event.preventDefault(); event.stopPropagation(); setShowDatePicker(true); }}
                 className="w-full rounded-lg border border-dashed border-gray-300 px-3 py-2 text-left text-sm text-gray-600 hover:border-gray-400"
               >
                 Pick a custom date
@@ -307,6 +390,7 @@ const QuickScheduleMenu = forwardRef<QuickScheduleMenuHandle, QuickScheduleMenuP
               type="button"
               data-testid="qs-clear-due"
               onMouseDown={(event) => { event.preventDefault(); event.stopPropagation(); setDue(null); }}
+              onClick={(event) => { event.preventDefault(); event.stopPropagation(); setDue(null); }}
               className="w-full text-left text-xs font-medium text-gray-600 hover:text-gray-800"
             >
               Clear schedule
@@ -326,7 +410,8 @@ const QuickScheduleMenu = forwardRef<QuickScheduleMenuHandle, QuickScheduleMenuP
                     key={option.key}
                     type="button"
                     onMouseDown={(event) => { event.preventDefault(); event.stopPropagation(); setDeadline(option.value); }}
-                    className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition ${
+                    onClick={(event) => { event.preventDefault(); event.stopPropagation(); setDeadline(option.value); }}
+                    className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition ${
                       isActive ? 'border-rose-500 bg-rose-50 text-rose-700' : 'border-gray-200 text-gray-700 hover:border-gray-300'
                     }`}
                   >
@@ -362,7 +447,12 @@ const QuickScheduleMenu = forwardRef<QuickScheduleMenuHandle, QuickScheduleMenuP
                     }
                   }}
                 />
-                <button type="button" className="text-xs text-gray-500" onMouseDown={(event) => { event.preventDefault(); event.stopPropagation(); setShowDeadlinePicker(false); }}>
+                <button
+                  type="button"
+                  className="text-xs text-gray-500"
+                  onMouseDown={(event) => { event.preventDefault(); event.stopPropagation(); setShowDeadlinePicker(false); }}
+                  onClick={(event) => { event.preventDefault(); event.stopPropagation(); setShowDeadlinePicker(false); }}
+                >
                   Cancel
                 </button>
               </div>
@@ -371,6 +461,7 @@ const QuickScheduleMenu = forwardRef<QuickScheduleMenuHandle, QuickScheduleMenuP
                 type="button"
                 data-testid="qs-set-deadline"
                 onMouseDown={(event) => { event.preventDefault(); event.stopPropagation(); setShowDeadlinePicker(true); }}
+                onClick={(event) => { event.preventDefault(); event.stopPropagation(); setShowDeadlinePicker(true); }}
                 className="w-full rounded-lg border border-dashed border-gray-300 px-3 py-2 text-left text-sm text-gray-600 hover:border-gray-400"
               >
                 Pick a deadline
@@ -380,12 +471,12 @@ const QuickScheduleMenu = forwardRef<QuickScheduleMenuHandle, QuickScheduleMenuP
               type="button"
               data-testid="qs-clear-deadline"
               onMouseDown={(event) => { event.preventDefault(); event.stopPropagation(); setDeadline(null); }}
+              onClick={(event) => { event.preventDefault(); event.stopPropagation(); setDeadline(null); }}
               className="w-full text-left text-xs font-medium text-gray-600 hover:text-gray-800"
             >
               Remove deadline
             </button>
           </section>
-
         </div>
       </div>
     </Transition>
@@ -393,36 +484,49 @@ const QuickScheduleMenu = forwardRef<QuickScheduleMenuHandle, QuickScheduleMenuP
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeMenu();
+      }
+    };
     document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('keydown', onKey); };
-  }, [open]);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [closeMenu, open]);
 
   return (
     <div className="relative inline-block text-left">
       <button
         title="Quick schedule"
         ref={btnRef}
-        className="p-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-        onPointerDown={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
-        onTouchStart={(e) => e.stopPropagation()}
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); openMenu(); }}
+        className="rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+        onPointerDown={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+        onTouchStart={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const rect = btnRef.current?.getBoundingClientRect();
+          openMenu(rect ?? undefined);
+        }}
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       </button>
-      {typeof window !== 'undefined' && open ? createPortal(
-        <div
-          onClick={closeMenu}
-          onPointerDown={closeMenu}
-          style={{ position: 'fixed', inset: 0, zIndex: 99998 }}
-        >
-          {Panel}
-        </div>,
-        document.body
-      ) : null}
+      {typeof window !== 'undefined' && open
+        ? createPortal(
+            <div
+              onClick={closeMenu}
+              onPointerDown={closeMenu}
+              style={{ position: 'fixed', inset: 0, zIndex: 99998 }}
+            >
+              <div className="absolute inset-0 bg-black/30" aria-hidden />
+              {Panel}
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 });

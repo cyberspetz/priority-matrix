@@ -59,6 +59,7 @@ export default function TaskDetailSheet({ task, isOpen, onClose, onUpdate, onTog
   const [deadlineAt, setDeadlineAt] = useState<string>('');
   const [priority, setPriority] = useState<Task['priority_level']>('p3');
   const [toast, setToast] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [dateMenu, setDateMenu] = useState<DateMenuState | null>(null);
 
   const dueButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -86,10 +87,11 @@ export default function TaskDetailSheet({ task, isOpen, onClose, onUpdate, onTog
     );
   }, [deadlineAt, dueDate, notes, quadrant, task, title, priority]);
 
-  const handleSave = useCallback(() => {
-    if (!task || !title.trim() || !hasChanges) {
+  const handleSave = useCallback(async () => {
+    if (!task || !title.trim() || !hasChanges || saving) {
       return;
     }
+
     const updates: TaskUpdatePayload = {};
     if (title.trim() !== task.title) updates.title = title.trim();
     if ((notes || '') !== (task.notes || '')) updates.notes = notes.trim() ? notes.trim() : null;
@@ -102,9 +104,18 @@ export default function TaskDetailSheet({ task, isOpen, onClose, onUpdate, onTog
       return;
     }
 
-    onUpdate(task.id, updates);
-    setToast('Task updated');
-  }, [deadlineAt, dueDate, hasChanges, notes, onUpdate, priority, quadrant, task, title]);
+    try {
+      setSaving(true);
+      await Promise.resolve(onUpdate(task.id, updates));
+      setToast('Task updated');
+      onClose();
+    } catch (error) {
+      console.error('Failed to update task detail sheet:', error);
+      setToast('Unable to update task');
+    } finally {
+      setSaving(false);
+    }
+  }, [deadlineAt, dueDate, hasChanges, notes, onClose, onUpdate, priority, quadrant, saving, task, title]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -118,7 +129,7 @@ export default function TaskDetailSheet({ task, isOpen, onClose, onUpdate, onTog
       }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
-        handleSave();
+        handleSave().catch(() => {});
       }
     };
     document.addEventListener('keydown', onKey);
@@ -481,10 +492,10 @@ export default function TaskDetailSheet({ task, isOpen, onClose, onUpdate, onTog
                     <button
                       type="button"
                       className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
-                      onClick={handleSave}
-                      disabled={!task || !title.trim() || !hasChanges}
+                      onClick={() => { void handleSave(); }}
+                      disabled={!task || !title.trim() || !hasChanges || saving}
                     >
-                      Save changes
+                      {saving ? 'Saving…' : 'Save changes'}
                     </button>
                   </div>
                 </div>

@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { useRef } from 'react';
 import type { TaskPriority, TaskUpdatePayload } from '@/lib/supabaseClient';
 import { getPriorityMeta } from '@/lib/priority';
 
@@ -57,13 +57,19 @@ function dueChip(due?: string) {
   };
 }
 
-import QuickScheduleMenu from './QuickScheduleMenu';
+import QuickScheduleMenu, { type QuickScheduleMenuHandle } from './QuickScheduleMenu';
 import TaskActionMenu from './TaskActionMenu';
 
 export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt, isCompleted, priority, onToggleComplete, onDelete, onUpdate, onOpenDetail, onArchive }: TaskListItemProps) {
   const due = !isCompleted ? dueChip(dueDate) : null;
   const isDeadlineOver = deadlineAt ? new Date(deadlineAt) < new Date() : false;
   const priorityMeta = getPriorityMeta(priority);
+  const quickMenuRef = useRef<QuickScheduleMenuHandle | null>(null);
+
+  const openQuickMenu = (anchor?: HTMLElement | null) => {
+    if (!quickMenuRef.current) return;
+    quickMenuRef.current.open(anchor?.getBoundingClientRect());
+  };
 
   return (
     <div
@@ -110,27 +116,63 @@ export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt,
             )}
           </button>
 
-          <div className="flex-1 min-w-0 space-y-0.5">
-            <div className={`text-[0.95rem] md:text-sm ${isCompleted ? 'line-through text-gray-400' : 'text-gray-900'}`}>{title}</div>
-            <div className="flex flex-wrap items-center gap-1.5 text-[0.7rem] md:text-xs">
-              <span
-                data-priority-pill
-                data-priority-level={priority}
-                className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${priorityMeta.badgeTone} ${priorityMeta.badgeText}`}
-              >
-                <svg className={`h-[0.65rem] w-[0.65rem] ${priorityMeta.iconFill}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-                  <path d="M5 3a1 1 0 011-1h8a1 1 0 01.8 1.6L13.25 7l1.55 2.4A1 1 0 0114 11H6v6a1 1 0 11-2 0V3z" />
-                </svg>
-                {priorityMeta.flagLabel}
-              </span>
-              {due && (
-                <span title="Scheduled start" className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${due.classes}`}>{due.text}</span>
-              )}
-              {deadlineAt && !isCompleted && (
-                <span title="Deadline" className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${isDeadlineOver ? 'text-rose-700 bg-rose-50' : 'text-slate-700 bg-slate-100'}`}>Deadline</span>
-              )}
+            <div className="flex-1 min-w-0 space-y-0.5">
+              <div className={`text-[0.95rem] md:text-sm ${isCompleted ? 'line-through text-gray-400' : 'text-gray-900'}`}>{title}</div>
+              <div className="flex flex-wrap items-center gap-1.5 text-[0.7rem] md:text-xs">
+                <button
+                  type="button"
+                  data-priority-pill
+                  data-priority-level={priority}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openQuickMenu(event.currentTarget);
+                  }}
+                  className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${priorityMeta.badgeTone} ${priorityMeta.badgeText}`}
+                  aria-label={`Adjust priority (${priorityMeta.flagLabel})`}
+                >
+                  <svg className={`h-[0.65rem] w-[0.65rem] ${priorityMeta.iconFill}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                    <path d="M5 3a1 1 0 011-1h8a1 1 0 01.8 1.6L13.25 7l1.55 2.4A1 1 0 0114 11H6v6a1 1 0 11-2 0V3z" />
+                  </svg>
+                  {priorityMeta.flagLabel}
+                </button>
+                {due && (
+                  <button
+                    type="button"
+                    title="Scheduled start"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openQuickMenu(event.currentTarget);
+                    }}
+                    className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${due.classes}`}
+                    aria-label={`Adjust schedule (${due.text})`}
+                  >
+                    <svg className="h-[0.7rem] w-[0.7rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {due.text}
+                  </button>
+                )}
+                {deadlineAt && !isCompleted && (
+                  <button
+                    type="button"
+                    title="Deadline"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openQuickMenu(event.currentTarget);
+                    }}
+                    className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${
+                      isDeadlineOver ? 'text-rose-700 bg-rose-50' : 'text-slate-700 bg-slate-100'
+                    }`}
+                    aria-label="Adjust deadline"
+                  >
+                    <svg className="h-[0.7rem] w-[0.7rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3" />
+                    </svg>
+                    Deadline
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
         </div>
 
         <div
@@ -138,7 +180,14 @@ export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt,
           data-skip-task-detail="true"
         >
           {onUpdate && (
-            <QuickScheduleMenu id={id} dueDate={dueDate} deadlineAt={deadlineAt} priority={priority} onUpdate={onUpdate} />
+            <QuickScheduleMenu
+              ref={quickMenuRef}
+              id={id}
+              dueDate={dueDate}
+              deadlineAt={deadlineAt}
+              priority={priority}
+              onUpdate={onUpdate}
+            />
           )}
           {(onArchive || onDelete || onOpenDetail) && (
             <TaskActionMenu id={id} title={title} onArchive={onArchive} onDelete={onDelete} onOpenDetail={onOpenDetail} />
