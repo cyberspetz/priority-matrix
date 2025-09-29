@@ -124,6 +124,7 @@ export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt,
                   data-priority-pill
                   data-priority-level={priority}
                   onClick={(event) => {
+                    if (!onUpdate) return;
                     event.stopPropagation();
                     openQuickMenu(event.currentTarget);
                   }}
@@ -140,6 +141,7 @@ export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt,
                     type="button"
                     title="Scheduled start"
                     onClick={(event) => {
+                      if (!onUpdate) return;
                       event.stopPropagation();
                       openQuickMenu(event.currentTarget);
                     }}
@@ -157,6 +159,7 @@ export default function TaskListItem({ id, title, quadrant, dueDate, deadlineAt,
                     type="button"
                     title="Deadline"
                     onClick={(event) => {
+                      if (!onUpdate) return;
                       event.stopPropagation();
                       openQuickMenu(event.currentTarget);
                     }}

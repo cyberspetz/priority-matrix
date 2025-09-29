@@ -75,6 +75,7 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
   };
 
   const handleQuickMenuClick = (event: MouseEvent<HTMLElement>) => {
+    if (!onUpdate) return;
     event.preventDefault();
     event.stopPropagation();
     openQuickMenu(event.currentTarget);
@@ -106,7 +107,7 @@ export default function TaskCard({ id, title, isCompleted, dueDate, deadlineAt, 
       onClick={handleCardClick}
       onDoubleClick={handleCardClick}
       className={`relative z-30 group select-none rounded-xl border border-gray-200/50 bg-white/95 px-3 py-2 shadow-sm transition-all duration-200 md:px-4 md:py-3 md:shadow-none md:hover:border-gray-300 md:hover:shadow-lg ${
-        isDragging ? 'pointer-events-none scale-[1.01] shadow-xl' : 'cursor-pointer'
+        isDragging ? 'pointer-events-none scale-[1.01] opacity-0' : 'cursor-pointer'
       }`}
     >
       <div className="flex flex-wrap items-start gap-2 md:gap-3">

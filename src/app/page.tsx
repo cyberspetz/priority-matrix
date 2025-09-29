@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { DndContext, DragEndEvent, PointerSensor, TouchSensor, closestCorners, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, PointerSensor, TouchSensor, closestCorners, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 // import TaskCard from '@/components/TaskCard';
 import Quadrant from '@/components/Quadrant';
@@ -12,7 +12,8 @@ import SidebarNav from '@/components/SidebarNav';
 import TaskListItem from '@/components/TaskListItem';
 import TaskDetailSheet from '@/components/TaskDetailSheet';
 import PasswordProtection from '@/components/PasswordProtection';
-import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, completeTask, uncompleteTask, archiveTask, Task, TaskUpdatePayload } from '@/lib/supabaseClient';
+import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, completeTask, uncompleteTask, archiveTask, Task, TaskUpdatePayload, type TaskPriority } from '@/lib/supabaseClient';
+import { getPriorityMeta } from '@/lib/priority';
 
 interface FluidConfig {
   intensity: number;
@@ -39,6 +40,7 @@ export default function Home() {
   const [dragData, setDragData] = useState<{ isDragging: boolean; position?: { x: number; y: number } }>({
     isDragging: false
   });
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -118,8 +120,9 @@ export default function Home() {
     return tasks.find(t => t.id === detailTaskId) ?? null;
   }, [detailTaskId, tasks]);
 
-  const handleDragStart = () => {
+  const handleDragStart = (event: DragStartEvent) => {
     setDragData({ isDragging: true });
+    setActiveTaskId(String(event.active.id));
   };
 
   const handleDragMove = () => {
@@ -128,6 +131,7 @@ export default function Home() {
 
   const handleDragEnd = async (event: DragEndEvent) => {
     setDragData({ isDragging: false });
+    setActiveTaskId(null);
 
     const { active, over } = event;
     if (!over) return;
@@ -197,6 +201,11 @@ export default function Home() {
       const fetchedTasks = await getAllTasks();
       setTasks(fetchedTasks);
     }
+  };
+
+  const handleDragCancel = () => {
+    setDragData({ isDragging: false });
+    setActiveTaskId(null);
   };
 
   const openTaskDetail = (id: string) => {
@@ -378,7 +387,14 @@ export default function Home() {
           </div>
         ) : (
           activeView === 'inbox' ? (
-            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd}>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCorners}
+              onDragStart={handleDragStart}
+              onDragMove={handleDragMove}
+              onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
+            >
               <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 md:mt-0 md:gap-6 md:h-[calc(100vh-220px)]">
                 <Quadrant
                   id="urgent-important"
@@ -429,6 +445,41 @@ export default function Home() {
                   onArchiveTask={archiveTaskLocal}
                 />
               </div>
+              <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.2, 0, 0.2, 1)' }}>
+                {(() => {
+                  if (!activeTaskId) return null;
+                  const task = tasks.find(t => t.id === activeTaskId);
+                  if (!task) return null;
+                  const priorityMeta = getPriorityMeta((task.priority_level ?? 'p3') as TaskPriority);
+                  const dueLabel = task.due_date ? new Date(task.due_date).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                  }) : null;
+                  return (
+                    <div className="pointer-events-none select-none rounded-2xl border border-gray-200/70 bg-white p-4 shadow-2xl">
+                      <div className="flex flex-col gap-3">
+                        <div className="text-sm font-semibold text-gray-900">{task.title}</div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 ${priorityMeta.badgeTone} ${priorityMeta.badgeText}`}
+                          >
+                            <span className={`h-2 w-2 rounded-full ${priorityMeta.dotFill}`} aria-hidden />
+                            {priorityMeta.flagLabel}
+                          </span>
+                          {dueLabel && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-blue-700">
+                              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              {dueLabel}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </DragOverlay>
             </DndContext>
           ) : activeView === 'today' ? (
             <div className="mt-12 space-y-3 w-full max-w-2xl mx-auto md:mt-0">
