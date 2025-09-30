@@ -40,7 +40,10 @@ export default function TaskCard({
           task={task}
           projects={projects}
           onCancel={onExitEdit ?? (() => {})}
-          onSave={(updates) => onUpdate(task.id, updates)}
+          onSave={async (updates) => {
+            await onUpdate(task.id, updates);
+            onExitEdit?.();
+          }}
         />
       </div>
     );
