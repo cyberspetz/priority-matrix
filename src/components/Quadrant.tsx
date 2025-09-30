@@ -3,8 +3,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useEffect, useState } from 'react';
 import TaskCard from './TaskCard';
 import QuadrantInfoDialog from './QuadrantInfoDialog';
-import { Task } from '@/lib/supabaseClient';
-import type { TaskUpdatePayload } from '@/lib/supabaseClient';
+import { type Project, type Task, type TaskUpdatePayload } from '@/lib/supabaseClient';
 
 interface QuadrantProps {
   id: string;
@@ -17,9 +16,13 @@ interface QuadrantProps {
   onUpdateTask?: (id: string, updates: TaskUpdatePayload) => void;
   onOpenDetail?: (id: string) => void;
   onArchiveTask?: (id: string) => void;
+  projects: Project[];
+  editingTaskId?: string | null;
+  onEnterEdit?: (id: string) => void;
+  onExitEdit?: () => void;
 }
 
-export default function Quadrant({ id, title, description, tasks, accentColor, onDeleteTask, onToggleComplete, onUpdateTask, onOpenDetail, onArchiveTask }: QuadrantProps) {
+export default function Quadrant({ id, title, description, tasks, accentColor, onDeleteTask, onToggleComplete, onUpdateTask, onOpenDetail, onArchiveTask, projects, editingTaskId, onEnterEdit, onExitEdit }: QuadrantProps) {
   const [mounted, setMounted] = useState(false);
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
 
@@ -86,20 +89,19 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
             </div>
           ) : (
             tasks.map(task => (
-              <TaskCard
-                key={task.id}
-                id={task.id}
-                title={task.title}
-                isCompleted={task.is_completed}
-                dueDate={task.due_date}
-                deadlineAt={task.deadline_at}
-                priority={task.priority_level ?? 'p3'}
-                onDelete={onDeleteTask}
-                onArchive={onArchiveTask}
-                onToggleComplete={onToggleComplete}
-                onOpenDetail={onOpenDetail}
-                onUpdate={(taskId, updates) => onUpdateTask?.(taskId, updates)}
-              />
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onDelete={onDeleteTask}
+                  onArchive={onArchiveTask}
+                  onToggleComplete={onToggleComplete}
+                  onOpenDetail={onOpenDetail}
+                  onUpdate={(taskId, updates) => onUpdateTask?.(taskId, updates)}
+                  projects={projects}
+                  isEditing={editingTaskId === task.id}
+                  onEnterEdit={onEnterEdit}
+                  onExitEdit={onExitEdit}
+                />
             ))
           )}
         </SortableContext>

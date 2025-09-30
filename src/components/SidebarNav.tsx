@@ -1,6 +1,8 @@
 "use client";
-import React from 'react';
+import React, { useState } from 'react';
 import { usePasswordProtection } from './PasswordProtection';
+import ProjectModal from './ProjectModal';
+import type { Project, ProjectLayout } from '@/lib/supabaseClient';
 
 type View = 'inbox' | 'today' | 'upcoming';
 
@@ -10,10 +12,15 @@ interface SidebarNavProps {
   onSelect: (view: View) => void;
   onAddTask: () => void;
   counts: { inbox: number; today: number; upcoming: number };
+  projects: Project[];
+  activeProjectId: string | null;
+  onSelectProject: (projectId: string | null) => void;
+  onCreateProject: (input: { name: string; color?: string | null; layout: ProjectLayout }) => Promise<Project>;
 }
 
-export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, counts }: SidebarNavProps) {
+export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, counts, projects, activeProjectId, onSelectProject, onCreateProject }: SidebarNavProps) {
   const { logout } = usePasswordProtection();
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const NavItem: React.FC<{ icon: React.ReactNode; label: string; count?: number; onClick: () => void }> = ({ icon, label, count, onClick }) => (
     <button
       onClick={() => { onClick(); onClose(); }}
@@ -28,6 +35,12 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
       )}
     </button>
   );
+
+  const handleProjectSubmit = async (input: { name: string; color?: string | null; layout: ProjectLayout }) => {
+    const project = await onCreateProject(input);
+    onSelectProject(project.id ?? null);
+    return project;
+  };
 
   return (
     <>
@@ -88,6 +101,41 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
             />
           </div>
 
+          <div className="mt-6 border-t border-gray-100 pt-4">
+            <div className="flex items-center justify-between px-1 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Projects</span>
+              <button
+                type="button"
+                onClick={() => setIsProjectModalOpen(true)}
+                className="rounded-md p-1 text-gray-500 hover:bg-gray-100"
+                title="Add project"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-1">
+              <button
+                type="button"
+                onClick={() => { onSelectProject(null); onClose(); }}
+                className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium ${activeProjectId === null ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'}`}
+              >
+                All projects
+              </button>
+              {projects.map(project => (
+                <button
+                  key={project.id}
+                  type="button"
+                  onClick={() => { onSelectProject(project.id ?? null); onClose(); }}
+                  className={`w-full rounded-lg px-3 py-2 text-left text-sm ${project.id === activeProjectId ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-gray-100'}`}
+                >
+                  {project.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="pt-4 mt-6 border-t border-gray-100">
             <button
               onClick={() => { logout(); onClose(); }}
@@ -101,6 +149,11 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
           </div>
         </div>
       </aside>
+      <ProjectModal
+        isOpen={isProjectModalOpen}
+        onClose={() => setIsProjectModalOpen(false)}
+        onSubmit={handleProjectSubmit}
+      />
     </>
   );
 }

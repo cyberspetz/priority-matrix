@@ -12,7 +12,7 @@ import SidebarNav from '@/components/SidebarNav';
 import TaskListItem from '@/components/TaskListItem';
 import TaskDetailSheet from '@/components/TaskDetailSheet';
 import PasswordProtection from '@/components/PasswordProtection';
-import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, completeTask, uncompleteTask, archiveTask, Task, TaskUpdatePayload, type TaskPriority } from '@/lib/supabaseClient';
+import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, completeTask, uncompleteTask, archiveTask, getProjects, createProject, Task, TaskUpdatePayload, type TaskPriority, type Project, type ProjectLayout } from '@/lib/supabaseClient';
 import { getPriorityMeta } from '@/lib/priority';
 
 interface FluidConfig {
@@ -41,6 +41,9 @@ export default function Home() {
     isDragging: false
   });
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -80,13 +83,37 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const loadProjects = async () => {
+      try {
+        const list = await getProjects();
+        setProjects(list);
+        const defaultProject = list.find(p => p.is_default) ?? list[0];
+        setActiveProjectId(defaultProject?.id ?? null);
+      } catch (error) {
+        console.error('Failed to load projects:', error);
+      }
+    };
+
+    loadProjects();
+  }, []);
+
+  useEffect(() => {
     if (detailTaskId && !tasks.some(task => task.id === detailTaskId)) {
       setDetailTaskId(null);
     }
   }, [detailTaskId, tasks]);
 
+  useEffect(() => {
+    setEditingTaskId(null);
+  }, [activeProjectId]);
+
+  const visibleTasks = useMemo(() => {
+    if (!activeProjectId) return tasks;
+    return tasks.filter(task => (task.project_id ?? null) === activeProjectId);
+  }, [activeProjectId, tasks]);
+
   const getTasksByQuadrant = (quadrant: string) => {
-    return tasks
+    return visibleTasks
       .filter(task => task.quadrant === quadrant)
       .sort((a, b) => (a.sort_index ?? 0) - (b.sort_index ?? 0));
   };
@@ -106,11 +133,11 @@ export default function Home() {
 
   const isActive = (t: Task) => t.status !== 'archived';
 
-  const todayTasks = tasks.filter(t => isActive(t) && ((t.due_date && t.due_date.startsWith(todayStr)) || (t.created_at?.startsWith?.(todayStr))));
-  const upcomingTasks = tasks.filter(t => isActive(t) && t.due_date && (t.due_date >= todayStr));
+  const todayTasks = visibleTasks.filter(t => isActive(t) && ((t.due_date && t.due_date.startsWith(todayStr)) || (t.created_at?.startsWith?.(todayStr))));
+  const upcomingTasks = visibleTasks.filter(t => isActive(t) && t.due_date && (t.due_date >= todayStr));
 
   const counts = {
-    inbox: tasks.filter(isActive).length,
+    inbox: visibleTasks.filter(isActive).length,
     today: todayTasks.length,
     upcoming: upcomingTasks.filter(t => t.due_date && t.due_date > todayStr).length,
   };
@@ -151,10 +178,15 @@ export default function Home() {
     const sortByIndex = (a: Task, b: Task) => (a.sort_index ?? 0) - (b.sort_index ?? 0);
 
     const currentTasks = tasks;
-    const sourceList = currentTasks.filter(t => t.quadrant === sourceQuadrant).sort(sortByIndex);
-    const targetList = sourceQuadrant === targetQuadrant
-      ? sourceList
-      : currentTasks.filter(t => t.quadrant === targetQuadrant).sort(sortByIndex);
+    const movingTask = currentTasks.find(t => t.id === activeId);
+    const projectScope = movingTask?.project_id ?? null;
+    const scopedFilter = (quadrant: Task['quadrant']) =>
+      currentTasks
+        .filter(t => t.quadrant === quadrant && (t.project_id ?? null) === projectScope)
+        .sort(sortByIndex);
+
+    const sourceList = scopedFilter(sourceQuadrant);
+    const targetList = sourceQuadrant === targetQuadrant ? sourceList : scopedFilter(targetQuadrant);
 
     const oldIndex = sourceList.findIndex(task => task.id === activeId);
     if (oldIndex === -1) return;
@@ -234,7 +266,20 @@ export default function Home() {
 
   const addTask = async (title: string, dueDate?: string, deadlineAt?: string) => {
     try {
-      const newTask = await createTask(title, 'urgent-important', undefined, dueDate, undefined, undefined, undefined, undefined, undefined, deadlineAt);
+      const fallbackProjectId = activeProjectId ?? projects.find(p => p.is_default)?.id ?? projects[0]?.id;
+      const newTask = await createTask(
+        title,
+        'urgent-important',
+        undefined,
+        dueDate,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        deadlineAt,
+        fallbackProjectId ?? undefined
+      );
       setTasks(prevTasks => [...prevTasks, newTask]);
     } catch (error) {
       console.error('Failed to create task:', error);
@@ -314,13 +359,30 @@ export default function Home() {
 
   const updateTaskFields = async (id: string, updates: TaskUpdatePayload) => {
     try {
-      setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-      await updateTask(id, updates);
+      const updated = await updateTask(id, updates);
+      setTasks(prev => prev.map(t => t.id === id ? updated : t));
     } catch (error) {
       console.error('Failed to update task fields:', error);
       const fetched = await getAllTasks();
       setTasks(fetched);
     }
+  };
+
+  const handleInlineSave = async (id: string, updates: TaskUpdatePayload) => {
+    await updateTaskFields(id, updates);
+    setEditingTaskId(null);
+  };
+
+  const handleCreateProject = async ({ name, color, layout }: { name: string; color?: string | null; layout?: ProjectLayout }) => {
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error('Project name is required');
+    const project = await createProject(trimmed, color, false, layout ?? 'board');
+    setProjects(prev => {
+      const next = [...prev, project];
+      return next.sort((a, b) => a.name.localeCompare(b.name));
+    });
+    setActiveProjectId(project.id);
+    return project;
   };
 
   // const handleArchiveCompleted = async () => {
@@ -407,6 +469,10 @@ export default function Home() {
                   onUpdateTask={updateTaskFields}
                   onOpenDetail={openTaskDetail}
                   onArchiveTask={archiveTaskLocal}
+                  projects={projects}
+                  editingTaskId={editingTaskId}
+                  onEnterEdit={(id) => setEditingTaskId(id)}
+                  onExitEdit={() => setEditingTaskId(null)}
                 />
                 <Quadrant
                   id="not-urgent-important"
@@ -419,6 +485,10 @@ export default function Home() {
                   onUpdateTask={updateTaskFields}
                   onOpenDetail={openTaskDetail}
                   onArchiveTask={archiveTaskLocal}
+                  projects={projects}
+                  editingTaskId={editingTaskId}
+                  onEnterEdit={(id) => setEditingTaskId(id)}
+                  onExitEdit={() => setEditingTaskId(null)}
                 />
                 <Quadrant
                   id="urgent-not-important"
@@ -431,6 +501,10 @@ export default function Home() {
                   onUpdateTask={updateTaskFields}
                   onOpenDetail={openTaskDetail}
                   onArchiveTask={archiveTaskLocal}
+                  projects={projects}
+                  editingTaskId={editingTaskId}
+                  onEnterEdit={(id) => setEditingTaskId(id)}
+                  onExitEdit={() => setEditingTaskId(null)}
                 />
                 <Quadrant
                   id="not-urgent-not-important"
@@ -443,6 +517,10 @@ export default function Home() {
                   onUpdateTask={updateTaskFields}
                   onOpenDetail={openTaskDetail}
                   onArchiveTask={archiveTaskLocal}
+                  projects={projects}
+                  editingTaskId={editingTaskId}
+                  onEnterEdit={(id) => setEditingTaskId(id)}
+                  onExitEdit={() => setEditingTaskId(null)}
                 />
               </div>
               <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.2, 0, 0.2, 1)' }}>
@@ -487,18 +565,17 @@ export default function Home() {
               {todayTasks.map(t => (
                 <TaskListItem
                   key={t.id}
-                  id={t.id}
-                  title={t.title}
+                  task={t}
                   quadrant={t.quadrant}
-                  dueDate={t.due_date}
-                  deadlineAt={t.deadline_at}
-                  isCompleted={t.is_completed}
-                  priority={t.priority_level ?? 'p3'}
                   onToggleComplete={toggleTaskComplete}
                   onDelete={deleteTask}
-                  onUpdate={updateTaskFields}
+                  onUpdate={(taskId, updates) => handleInlineSave(taskId, updates)}
                   onOpenDetail={openTaskDetail}
                   onArchive={archiveTaskLocal}
+                  projects={projects}
+                  isEditing={editingTaskId === t.id}
+                  onEnterEdit={(id) => setEditingTaskId(id)}
+                  onExitEdit={() => setEditingTaskId(null)}
                 />
               ))}
             </div>
@@ -511,18 +588,17 @@ export default function Home() {
                   {tasks.filter(t => isActive(t) && t.due_date?.startsWith(todayStr)).map(t => (
                     <TaskListItem
                       key={t.id}
-                      id={t.id}
-                      title={t.title}
-                  quadrant={t.quadrant}
-                  dueDate={t.due_date}
-                  deadlineAt={t.deadline_at}
-                  isCompleted={t.is_completed}
-                  priority={t.priority_level ?? 'p3'}
+                      task={t}
+                      quadrant={t.quadrant}
                       onToggleComplete={toggleTaskComplete}
                       onDelete={deleteTask}
-                      onUpdate={updateTaskFields}
+                      onUpdate={(taskId, updates) => handleInlineSave(taskId, updates)}
                       onOpenDetail={openTaskDetail}
                       onArchive={archiveTaskLocal}
+                  projects={projects}
+                      isEditing={editingTaskId === t.id}
+                      onEnterEdit={(id) => setEditingTaskId(id)}
+                      onExitEdit={() => setEditingTaskId(null)}
                     />
                   ))}
                 </div>
@@ -533,18 +609,17 @@ export default function Home() {
                   {tasks.filter(t => isActive(t) && t.due_date === tomorrowStr).map(t => (
                     <TaskListItem
                       key={t.id}
-                      id={t.id}
-                      title={t.title}
-                  quadrant={t.quadrant}
-                  dueDate={t.due_date}
-                  deadlineAt={t.deadline_at}
-                  isCompleted={t.is_completed}
-                  priority={t.priority_level ?? 'p3'}
+                      task={t}
+                      quadrant={t.quadrant}
                       onToggleComplete={toggleTaskComplete}
                       onDelete={deleteTask}
-                      onUpdate={updateTaskFields}
+                      onUpdate={(taskId, updates) => handleInlineSave(taskId, updates)}
                       onOpenDetail={openTaskDetail}
                       onArchive={archiveTaskLocal}
+                  projects={projects}
+                      isEditing={editingTaskId === t.id}
+                      onEnterEdit={(id) => setEditingTaskId(id)}
+                      onExitEdit={() => setEditingTaskId(null)}
                     />
                   ))}
                 </div>
@@ -558,18 +633,17 @@ export default function Home() {
                   }).map(t => (
                     <TaskListItem
                       key={t.id}
-                      id={t.id}
-                      title={t.title}
-                  quadrant={t.quadrant}
-                  dueDate={t.due_date}
-                  deadlineAt={t.deadline_at}
-                  isCompleted={t.is_completed}
-                  priority={t.priority_level ?? 'p3'}
+                      task={t}
+                      quadrant={t.quadrant}
                       onToggleComplete={toggleTaskComplete}
                       onDelete={deleteTask}
-                      onUpdate={updateTaskFields}
+                      onUpdate={(taskId, updates) => handleInlineSave(taskId, updates)}
                       onOpenDetail={openTaskDetail}
                       onArchive={archiveTaskLocal}
+                  projects={projects}
+                      isEditing={editingTaskId === t.id}
+                      onEnterEdit={(id) => setEditingTaskId(id)}
+                      onExitEdit={() => setEditingTaskId(null)}
                     />
                   ))}
                 </div>
@@ -583,18 +657,17 @@ export default function Home() {
                   }).map(t => (
                     <TaskListItem
                       key={t.id}
-                      id={t.id}
-                      title={t.title}
-                  quadrant={t.quadrant}
-                  dueDate={t.due_date}
-                  deadlineAt={t.deadline_at}
-                  isCompleted={t.is_completed}
-                  priority={t.priority_level ?? 'p3'}
+                      task={t}
+                      quadrant={t.quadrant}
                       onToggleComplete={toggleTaskComplete}
                       onDelete={deleteTask}
-                      onUpdate={updateTaskFields}
+                      onUpdate={(taskId, updates) => handleInlineSave(taskId, updates)}
                       onOpenDetail={openTaskDetail}
                       onArchive={archiveTaskLocal}
+                  projects={projects}
+                      isEditing={editingTaskId === t.id}
+                      onEnterEdit={(id) => setEditingTaskId(id)}
+                      onExitEdit={() => setEditingTaskId(null)}
                     />
                   ))}
                 </div>
@@ -620,6 +693,8 @@ export default function Home() {
             await deleteTask(taskId);
           }}
           onArchive={(taskId) => archiveTaskLocal(taskId)}
+          projects={projects}
+          onCreateProject={handleCreateProject}
         />
 
         <ReportsSidebar
@@ -665,6 +740,10 @@ export default function Home() {
         onAddTask={() => setIsModalOpen(true)}
         onSelect={(view) => setActiveView(view)}
         counts={counts}
+        projects={projects}
+        activeProjectId={activeProjectId}
+        onSelectProject={(projectId) => setActiveProjectId(projectId)}
+        onCreateProject={handleCreateProject}
       />
     </div>
     </PasswordProtection>
