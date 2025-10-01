@@ -11,6 +11,11 @@ interface TaskInlineEditorProps {
   onCancel: () => void;
 }
 
+const toLocalISODate = (date: Date) => {
+  const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return adjusted.toISOString().split('T')[0];
+};
+
 const dateOptions = (base: Date) => {
   const clone = (days: number) => {
     const d = new Date(base);
@@ -18,13 +23,11 @@ const dateOptions = (base: Date) => {
     return d;
   };
 
-  const toISO = (d: Date) => d.toISOString().split('T')[0];
-
   return [
-    { label: 'Today', value: toISO(base), accent: 'text-emerald-600' },
-    { label: 'Tomorrow', value: toISO(clone(1)), accent: 'text-amber-600' },
-    { label: 'This weekend', value: toISO(clone( Math.max(1, 6 - base.getDay()) )), accent: 'text-rose-600' },
-    { label: 'Next week', value: toISO(clone(7)), accent: 'text-indigo-600' },
+    { label: 'Today', value: toLocalISODate(base), accent: 'text-emerald-600' },
+    { label: 'Tomorrow', value: toLocalISODate(clone(1)), accent: 'text-amber-600' },
+    { label: 'This weekend', value: toLocalISODate(clone(Math.max(1, 6 - base.getDay()))), accent: 'text-rose-600' },
+    { label: 'Next week', value: toLocalISODate(clone(7)), accent: 'text-indigo-600' },
     { label: 'No date', value: null, accent: 'text-gray-500' },
   ] as const;
 };
@@ -83,20 +86,29 @@ export default function TaskInlineEditor({ task, projects, onSave, onCancel }: T
   }, [task.id, task.project_id, projects]);
 
   return (
-    <div className="w-full rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div
+      className="w-full rounded-2xl border p-4 shadow-sm"
+      style={{
+        background: 'var(--color-surface-elevated)',
+        borderColor: 'var(--color-border)',
+        boxShadow: 'var(--shadow-soft)'
+      }}
+    >
       <div className="space-y-3">
         <textarea
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Task name"
-          className="w-full resize-none border-none bg-transparent text-base font-semibold text-gray-900 focus:outline-none focus:ring-0"
+          className="w-full resize-none border-none bg-transparent text-base font-semibold focus:outline-none focus:ring-0"
+          style={{ color: 'var(--color-text-900)' }}
           rows={1}
         />
         <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           placeholder="Description"
-          className="w-full resize-none rounded-lg border border-transparent bg-gray-50 px-3 py-2 text-sm text-gray-700 focus:border-gray-300 focus:outline-none"
+          className="w-full resize-none rounded-lg border border-transparent px-3 py-2 text-sm focus:border-gray-300 focus:outline-none"
+          style={{ background: 'rgba(148, 163, 184, 0.12)', color: 'var(--color-text-700)' }}
           rows={2}
         />
 
@@ -105,7 +117,12 @@ export default function TaskInlineEditor({ task, projects, onSave, onCancel }: T
             <button
               type="button"
               onClick={() => { setShowDueMenu(prev => !prev); setShowPriorityMenu(false); setShowDeadlineMenu(false); }}
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition ${dueDate ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+              className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition"
+              style={{
+                borderColor: dueDate ? 'rgba(54,183,180,0.4)' : 'var(--color-border)',
+                background: dueDate ? 'rgba(54,183,180,0.16)' : 'transparent',
+                color: dueDate ? 'var(--color-secondary-500)' : 'var(--color-text-500)'
+              }}
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -113,14 +130,15 @@ export default function TaskInlineEditor({ task, projects, onSave, onCancel }: T
               {formatDateChip(dueDate)}
             </button>
             {showDueMenu && (
-              <div className="absolute left-0 z-50 mt-2 w-48 rounded-lg border border-gray-200 bg-white p-2 shadow-lg">
+              <div className="absolute left-0 z-50 mt-2 w-48 rounded-lg border p-2 shadow-lg" style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }}>
                 <div className="space-y-1">
                   {dateOptions(today).map(option => (
                     <button
                       key={`due-${option.label}`}
                       type="button"
                       onClick={() => { setDueDate(option.value); setShowDueMenu(false); }}
-                      className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
+                      className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition"
+                      style={{ color: 'var(--color-text-700)' }}
                     >
                       <span>{option.label}</span>
                       <span className={`text-xs ${option.accent}`}>{option.value ? formatDateChip(option.value) : ''}</span>
@@ -132,7 +150,9 @@ export default function TaskInlineEditor({ task, projects, onSave, onCancel }: T
                     type="date"
                     value={dueDate ?? ''}
                     onChange={(event) => setDueDate(event.target.value || null)}
-                    className="w-full rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-700 focus:border-blue-400 focus:outline-none"
+                    className="w-full rounded-md border px-2 py-1 text-xs focus:outline-none"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-700)' }}
+                    min={toLocalISODate(today)}
                   />
                 </div>
               </div>
@@ -143,7 +163,12 @@ export default function TaskInlineEditor({ task, projects, onSave, onCancel }: T
             <button
               type="button"
               onClick={() => { setShowPriorityMenu(prev => !prev); setShowDueMenu(false); setShowDeadlineMenu(false); }}
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition ${priorityMeta.pillTone}`}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition`}
+              style={{
+                borderColor: priorityMeta.circleBorderColor ?? 'var(--color-border)',
+                background: priorityMeta.badgeFillColor ?? 'rgba(255, 113, 103, 0.18)',
+                color: priorityMeta.badgeTextColor ?? 'var(--color-primary-600)'
+              }}
             >
               <svg className={`h-3.5 w-3.5 ${priorityMeta.iconFill}`} viewBox="0 0 20 20" fill="currentColor">
                 <path d="M5 3a1 1 0 011-1h8a1 1 0 01.8 1.6L13.25 7l1.55 2.4A1 1 0 0114 11H6v6a1 1 0 11-2 0V3z" />
@@ -151,7 +176,7 @@ export default function TaskInlineEditor({ task, projects, onSave, onCancel }: T
               {priorityMeta.flagLabel.toUpperCase()}
             </button>
             {showPriorityMenu && (
-              <div className="absolute left-0 z-50 mt-2 w-44 rounded-lg border border-gray-200 bg-white p-1.5 shadow-lg">
+              <div className="absolute left-0 z-50 mt-2 w-44 rounded-lg border p-1.5 shadow-lg" style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }}>
                 {PRIORITY_ORDER.map(level => {
                   const meta = getPriorityMeta(level);
                   return (
@@ -159,7 +184,8 @@ export default function TaskInlineEditor({ task, projects, onSave, onCancel }: T
                       key={level}
                       type="button"
                       onClick={() => { setPriority(level); setShowPriorityMenu(false); }}
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100"
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition"
+                      style={{ color: 'var(--color-text-700)' }}
                     >
                       <svg className={`h-3 w-3 ${meta.iconFill}`} viewBox="0 0 20 20" fill="currentColor">
                         <path d="M5 3a1 1 0 011-1h8a1 1 0 01.8 1.6L13.25 7l1.55 2.4A1 1 0 0114 11H6v6a1 1 0 11-2 0V3z" />
@@ -177,7 +203,12 @@ export default function TaskInlineEditor({ task, projects, onSave, onCancel }: T
             <button
               type="button"
               onClick={() => { setShowDeadlineMenu(prev => !prev); setShowDueMenu(false); setShowPriorityMenu(false); }}
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition ${deadlineAt ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+              className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition"
+              style={{
+                borderColor: deadlineAt ? 'rgba(244,63,94,0.3)' : 'var(--color-border)',
+                background: deadlineAt ? 'rgba(244,63,94,0.12)' : 'transparent',
+                color: deadlineAt ? '#e11d48' : 'var(--color-text-500)'
+              }}
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3" />
@@ -185,12 +216,13 @@ export default function TaskInlineEditor({ task, projects, onSave, onCancel }: T
               {deadlineAt ? formatDateChip(deadlineAt) : 'Deadline'}
             </button>
             {showDeadlineMenu && (
-              <div className="absolute left-0 z-50 mt-2 w-48 rounded-lg border border-gray-200 bg-white p-2 shadow-lg">
+              <div className="absolute left-0 z-50 mt-2 w-48 rounded-lg border p-2 shadow-lg" style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }}>
                 <div className="space-y-1">
                   <button
                     type="button"
                     onClick={() => { setDeadlineAt(null); setShowDeadlineMenu(false); }}
-                    className="w-full rounded-md px-2 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100"
+                    className="w-full rounded-md px-2 py-1.5 text-left text-xs transition"
+                    style={{ color: 'var(--color-text-700)' }}
                   >
                     No deadline
                   </button>
@@ -200,7 +232,8 @@ export default function TaskInlineEditor({ task, projects, onSave, onCancel }: T
                     type="date"
                     value={deadlineAt ?? ''}
                     onChange={(event) => setDeadlineAt(event.target.value || null)}
-                    className="w-full rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-700 focus:border-rose-400 focus:outline-none"
+                    className="w-full rounded-md border px-2 py-1 text-xs focus:outline-none"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-700)' }}
                   />
                 </div>
               </div>
@@ -210,12 +243,17 @@ export default function TaskInlineEditor({ task, projects, onSave, onCancel }: T
 
         <div className="flex flex-col gap-3 pt-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-xs uppercase tracking-wide text-gray-400">Project</span>
+            <span className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>Project</span>
             <div className="relative">
               <select
                 value={projectId}
                 onChange={(event) => setProjectId(event.target.value)}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none"
+                className="rounded-lg border px-3 py-1.5 text-sm focus:outline-none"
+                style={{
+                  background: 'var(--color-surface)',
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text-700)'
+                }}
               >
                 {projects.length === 0 && <option value="">Inbox</option>}
                 {projects.map(project => (
@@ -231,7 +269,12 @@ export default function TaskInlineEditor({ task, projects, onSave, onCancel }: T
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-full border border-gray-200 p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+              className="rounded-full border p-2 transition"
+              style={{
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text-500)',
+                background: 'transparent'
+              }}
               aria-label="Cancel"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -242,7 +285,11 @@ export default function TaskInlineEditor({ task, projects, onSave, onCancel }: T
               type="button"
               onClick={handleSave}
               disabled={saving || !title.trim()}
-              className="rounded-full bg-rose-500 p-2 text-white shadow-sm transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:bg-rose-300"
+              className="rounded-full p-2 text-white shadow-sm transition disabled:cursor-not-allowed"
+              style={{
+                background: 'var(--color-primary-500)',
+                opacity: saving || !title.trim() ? 0.6 : 1
+              }}
               aria-label="Save"
             >
               {saving ? (

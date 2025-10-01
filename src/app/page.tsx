@@ -1,19 +1,21 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense, useCallback, startTransition } from 'react';
+import type { SetStateAction } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, PointerSensor, TouchSensor, closestCorners, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 // import TaskCard from '@/components/TaskCard';
 import Quadrant from '@/components/Quadrant';
 import AddTaskModal from '@/components/AddTaskModal';
 import FluidBackground from '@/components/FluidBackground';
-import ReportsSidebar from '@/components/ReportsSidebar';
-import SidebarNav from '@/components/SidebarNav';
-import TaskListItem from '@/components/TaskListItem';
-import TaskDetailSheet from '@/components/TaskDetailSheet';
-import PasswordProtection from '@/components/PasswordProtection';
 import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, completeTask, uncompleteTask, archiveTask, getProjects, createProject, Task, TaskUpdatePayload, type TaskPriority, type Project, type ProjectLayout } from '@/lib/supabaseClient';
 import { getPriorityMeta } from '@/lib/priority';
+
+const SidebarNav = lazy(() => import('@/components/SidebarNav'));
+const TaskListItem = lazy(() => import('@/components/TaskListItem'));
+const TaskDetailSheet = lazy(() => import('@/components/TaskDetailSheet'));
+const ReportsSidebar = lazy(() => import('@/components/ReportsSidebar'));
+const PasswordProtection = lazy(() => import('@/components/PasswordProtection'));
 
 interface FluidConfig {
   intensity: number;
@@ -29,21 +31,48 @@ interface FluidConfig {
   baseColorB: number;
 }
 
+const initialDataCache: { tasks: Task[] | null; projects: Project[] | null } = {
+  tasks: null,
+  projects: null,
+};
+
 export default function Home() {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<Task[]>(initialDataCache.tasks ?? []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState<'inbox' | 'today' | 'upcoming'>('inbox');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !(initialDataCache.tasks && initialDataCache.projects));
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [dragData, setDragData] = useState<{ isDragging: boolean; position?: { x: number; y: number } }>({
     isDragging: false
   });
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [projects, setProjects] = useState<Project[]>(initialDataCache.projects ?? []);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(() => {
+    if (!initialDataCache.projects) return null;
+    const defaultProject = initialDataCache.projects.find(p => p.is_default) ?? initialDataCache.projects[0];
+    return defaultProject?.id ?? null;
+  });
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [fluidEnabled, setFluidEnabled] = useState(true);
+
+  const syncTasks = (updater: SetStateAction<Task[]>) => {
+    setTasks(prev => {
+      const next = typeof updater === 'function' ? (updater as (value: Task[]) => Task[])(prev) : updater;
+      initialDataCache.tasks = next;
+      return next;
+    });
+  };
+
+  const syncProjects = (updater: SetStateAction<Project[]>) => {
+    setProjects(prev => {
+      const next = typeof updater === 'function' ? (updater as (value: Project[]) => Project[])(prev) : updater;
+      initialDataCache.projects = next;
+      return next;
+    });
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -65,36 +94,63 @@ export default function Home() {
     baseColorB: 0.8
   });
 
-  // Load tasks from Supabase on component mount
   useEffect(() => {
-    const loadTasks = async () => {
-      try {
-        setLoading(true);
-        const fetchedTasks = await getAllTasks();
-        setTasks(fetchedTasks);
-      } catch (error) {
-        console.error('Failed to load tasks:', error);
-      } finally {
+    let cancelled = false;
+
+    const loadInitialData = async () => {
+      if (initialDataCache.tasks && initialDataCache.projects) {
+        syncTasks(initialDataCache.tasks);
+        syncProjects(initialDataCache.projects);
         setLoading(false);
+        setActiveProjectId(prev => {
+          if (prev) return prev;
+          const defaultProject = initialDataCache.projects?.find(p => p.is_default) ?? initialDataCache.projects?.[0];
+          return defaultProject?.id ?? null;
+        });
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const [fetchedTasks, fetchedProjects] = await Promise.all([getAllTasks(), getProjects()]);
+        if (cancelled) return;
+
+        initialDataCache.tasks = fetchedTasks;
+        initialDataCache.projects = fetchedProjects;
+
+        syncTasks(fetchedTasks);
+        syncProjects(fetchedProjects);
+
+        setActiveProjectId(prev => {
+          if (prev) return prev;
+          const defaultProject = fetchedProjects.find(p => p.is_default) ?? fetchedProjects[0];
+          return defaultProject?.id ?? null;
+        });
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to load initial data:', error);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    loadTasks();
+    loadInitialData();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    const loadProjects = async () => {
-      try {
-        const list = await getProjects();
-        setProjects(list);
-        const defaultProject = list.find(p => p.is_default) ?? list[0];
-        setActiveProjectId(defaultProject?.id ?? null);
-      } catch (error) {
-        console.error('Failed to load projects:', error);
-      }
-    };
-
-    loadProjects();
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updateMotion = () => setPrefersReducedMotion(media.matches);
+    updateMotion();
+    media.addEventListener('change', updateMotion);
+    return () => media.removeEventListener('change', updateMotion);
   }, []);
 
   useEffect(() => {
@@ -120,10 +176,12 @@ export default function Home() {
 
   // Derived views
   const localDateString = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+    const copy = new Date(d.getTime());
+    copy.setHours(0, 0, 0, 0);
+    const year = copy.getFullYear();
+    const month = String(copy.getMonth() + 1).padStart(2, '0');
+    const day = String(copy.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const todayStr = localDateString(new Date());
@@ -223,7 +281,7 @@ export default function Home() {
     });
 
     try {
-      setTasks(nextTasks);
+      syncTasks(nextTasks);
 
       if (updates.size === 0) return;
 
@@ -231,7 +289,7 @@ export default function Home() {
     } catch (error) {
       console.error('Failed to apply drag reorder:', error);
       const fetchedTasks = await getAllTasks();
-      setTasks(fetchedTasks);
+      syncTasks(fetchedTasks);
     }
   };
 
@@ -240,27 +298,31 @@ export default function Home() {
     setActiveTaskId(null);
   };
 
-  const openTaskDetail = (id: string) => {
-    setDetailTaskId(id);
-  };
+  const openTaskDetail = useCallback((id: string) => {
+    startTransition(() => {
+      setDetailTaskId(id);
+    });
+  }, []);
 
-  const closeTaskDetail = () => {
-    setDetailTaskId(null);
-  };
+  const closeTaskDetail = useCallback(() => {
+    startTransition(() => {
+      setDetailTaskId(null);
+    });
+  }, []);
 
   const archiveTaskLocal = async (id: string) => {
     try {
       const task = tasks.find(t => t.id === id);
       if (!task) return;
 
-      setTasks(prev => prev.filter(t => t.id !== id));
+      syncTasks(prev => prev.filter(t => t.id !== id));
       setDetailTaskId(current => (current === id ? null : current));
 
       await archiveTask(id);
     } catch (error) {
       console.error('Failed to archive task:', error);
       const fetched = await getAllTasks();
-      setTasks(fetched);
+      syncTasks(fetched);
     }
   };
 
@@ -280,7 +342,7 @@ export default function Home() {
         deadlineAt,
         fallbackProjectId ?? undefined
       );
-      setTasks(prevTasks => [...prevTasks, newTask]);
+      syncTasks(prevTasks => [...prevTasks, newTask]);
     } catch (error) {
       console.error('Failed to create task:', error);
     }
@@ -302,7 +364,7 @@ export default function Home() {
       });
 
       // Optimistically update the UI
-      setTasks(prevTasks => prevTasks.filter(task => task.id !== id));
+      syncTasks(prevTasks => prevTasks.filter(task => task.id !== id));
       setDetailTaskId(current => (current === id ? null : current));
 
       // Archive completed tasks, delete active tasks
@@ -319,7 +381,7 @@ export default function Home() {
       console.error('Failed to delete/archive task:', error);
       // Revert the optimistic update by refetching
       const fetchedTasks = await getAllTasks();
-      setTasks(fetchedTasks);
+      syncTasks(fetchedTasks);
     }
   };
 
@@ -330,7 +392,8 @@ export default function Home() {
 
       // Optimistically update the UI
       const isCompleting = !task.is_completed;
-      setTasks(prevTasks =>
+      startTransition(() => {
+        syncTasks(prevTasks =>
         prevTasks.map(task =>
           task.id === id
             ? {
@@ -340,8 +403,8 @@ export default function Home() {
                 completed_at: isCompleting ? new Date().toISOString() : undefined
               }
             : task
-        )
-      );
+        ));
+      });
 
       // Update in Supabase using the new functions
       if (isCompleting) {
@@ -353,35 +416,36 @@ export default function Home() {
       console.error('Failed to toggle task completion:', error);
       // Revert the optimistic update by refetching
       const fetchedTasks = await getAllTasks();
-      setTasks(fetchedTasks);
+      syncTasks(fetchedTasks);
     }
   };
 
   const updateTaskFields = async (id: string, updates: TaskUpdatePayload) => {
     try {
       const updated = await updateTask(id, updates);
-      setTasks(prev => prev.map(t => t.id === id ? updated : t));
+      syncTasks(prev => prev.map(t => t.id === id ? updated : t));
     } catch (error) {
       console.error('Failed to update task fields:', error);
       const fetched = await getAllTasks();
-      setTasks(fetched);
+      syncTasks(fetched);
     }
   };
 
   const handleInlineSave = async (id: string, updates: TaskUpdatePayload) => {
     await updateTaskFields(id, updates);
-    setEditingTaskId(null);
+    startTransition(() => setEditingTaskId(null));
   };
 
   const handleCreateProject = async ({ name, color, layout }: { name: string; color?: string | null; layout?: ProjectLayout }) => {
     const trimmed = name.trim();
     if (!trimmed) throw new Error('Project name is required');
     const project = await createProject(trimmed, color, false, layout ?? 'board');
-    setProjects(prev => {
+    syncProjects(prev => {
       const next = [...prev, project];
       return next.sort((a, b) => a.name.localeCompare(b.name));
     });
-    setActiveProjectId(project.id);
+    initialDataCache.projects = initialDataCache.projects ? [...initialDataCache.projects, project].sort((a, b) => a.name.localeCompare(b.name)) : [project];
+    startTransition(() => setActiveProjectId(project.id));
     return project;
   };
 
@@ -396,33 +460,40 @@ export default function Home() {
   //   }
   // };
   return (
-    <PasswordProtection>
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[var(--color-surface-muted)] text-sm text-[var(--color-text-muted)]">Loading workspace…</div>}>
+      <PasswordProtection>
+    <div className="min-h-screen" style={{ background: 'var(--gradient-background)' }}>
       {/* Mouse-Interactive Fluid Background */}
-      <FluidBackground dragData={dragData} config={fluidConfig} />
-      <div className={`${activeView === 'inbox' ? 'max-w-7xl' : 'max-w-3xl'} mx-auto px-4 sm:px-6 lg:px-8 py-6`}>
+      {(!prefersReducedMotion && fluidEnabled) && <FluidBackground dragData={dragData} config={fluidConfig} />}
+      <div className={`${activeView === 'inbox' ? 'max-w-7xl' : 'max-w-3xl'} mx-auto px-4 sm:px-6 lg:px-8 py-6 transition-[max-width] duration-300`}>
         {/* Sidebar toggle */}
         <button
           onClick={() => setIsSidebarOpen(true)}
-          className="fixed left-4 top-4 z-50 p-2 rounded-lg bg-white/90 border border-gray-200 shadow md:left-6 md:top-6"
+          className="fixed left-4 top-4 z-50 p-2 rounded-lg border shadow md:left-6 md:top-6"
+          style={{
+            background: 'rgba(255,255,255,0.88)',
+            borderColor: 'var(--color-border)',
+            boxShadow: 'var(--shadow-soft)'
+          }}
           title="Open menu"
         >
           <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
         {/* Header (hidden on mobile to maximize space) */}
-        <div className="hidden md:flex items-center justify-between mb-8">
+        <div className="hidden md:flex items-center justify-between mb-8 transition-all duration-200">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold mb-2 text-[var(--color-text-900)]">
               Priority Matrix
             </h1>
-            <p className="text-gray-600">
+            <p className="text-[var(--color-text-muted)]">
               Organize your tasks using the Eisenhower Decision Matrix
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button
+        <button
               onClick={() => setIsReportsOpen(true)}
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium px-4 py-2.5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+              className="flex items-center gap-2 text-white font-medium px-4 py-2.5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+              style={{ background: 'var(--color-accent-500)' }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -433,7 +504,8 @@ export default function Home() {
             <button
               data-testid="header-add-task"
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+              className="flex items-center gap-2 text-white font-medium px-5 py-2.5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+              style={{ background: 'var(--color-primary-500)' }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -441,11 +513,22 @@ export default function Home() {
               Add Task
             </button>
           </div>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-gray-500">
+              <input
+                type="checkbox"
+                checked={fluidEnabled}
+                onChange={() => setFluidEnabled(prev => !prev)}
+                className="h-4 w-4 rounded border-[#d1d5db] text-[var(--color-primary-500)] focus:ring-[var(--color-primary-500)]"
+              />
+              Motion FX
+            </label>
+          </div>
         </div>
 
         {loading ? (
           <div className="flex justify-center items-center h-[calc(100vh-200px)]">
-            <div className="text-xl text-gray-600">Loading tasks...</div>
+            <div className="text-xl text-[var(--color-text-muted)]">Loading tasks...</div>
           </div>
         ) : (
           activeView === 'inbox' ? (
@@ -471,8 +554,8 @@ export default function Home() {
                   onArchiveTask={archiveTaskLocal}
                   projects={projects}
                   editingTaskId={editingTaskId}
-                  onEnterEdit={(id) => setEditingTaskId(id)}
-                  onExitEdit={() => setEditingTaskId(null)}
+                  onEnterEdit={(id) => startTransition(() => setEditingTaskId(id))}
+                  onExitEdit={() => startTransition(() => setEditingTaskId(null))}
                 />
                 <Quadrant
                   id="not-urgent-important"
@@ -682,30 +765,35 @@ export default function Home() {
           onAddTask={addTask}
         />
 
-        <TaskDetailSheet
-          task={detailTask}
-          isOpen={Boolean(detailTask)}
-          onClose={closeTaskDetail}
-          onUpdate={(taskId, updates) => updateTaskFields(taskId, updates)}
-          onToggleComplete={toggleTaskComplete}
-          onDelete={async (taskId) => {
-            closeTaskDetail();
-            await deleteTask(taskId);
-          }}
-          onArchive={(taskId) => archiveTaskLocal(taskId)}
-          projects={projects}
-          onCreateProject={handleCreateProject}
-        />
+        <Suspense fallback={null}>
+          <TaskDetailSheet
+            task={detailTask}
+            isOpen={Boolean(detailTask)}
+            onClose={closeTaskDetail}
+            onUpdate={(taskId, updates) => updateTaskFields(taskId, updates)}
+            onToggleComplete={toggleTaskComplete}
+            onDelete={async (taskId) => {
+              closeTaskDetail();
+              await deleteTask(taskId);
+            }}
+            onArchive={(taskId) => archiveTaskLocal(taskId)}
+            projects={projects}
+            onCreateProject={handleCreateProject}
+          />
+        </Suspense>
 
-        <ReportsSidebar
-          isOpen={isReportsOpen}
-          onClose={() => setIsReportsOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <ReportsSidebar
+            isOpen={isReportsOpen}
+            onClose={() => setIsReportsOpen(false)}
+          />
+        </Suspense>
 
-        <button
+          <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="md:hidden fixed bottom-6 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl transition-all duration-200 hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+          className="md:hidden fixed bottom-6 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-xl transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+            style={{ background: 'var(--color-primary-500)', boxShadow: 'var(--shadow-soft)' }}
           aria-label="Add task"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -715,10 +803,14 @@ export default function Home() {
 
         {/* Premium Floating Toggle Button - hidden on mobile */}
         {!isReportsOpen && (
-          <button
+        <button
             onClick={() => setIsReportsOpen(true)}
-            className="hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 translate-x-3 w-10 h-10 bg-gradient-to-bl from-slate-800/90 via-slate-700/90 to-slate-900/90 backdrop-blur-lg border border-white/10 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 items-center justify-center group hover:from-slate-700/95 hover:via-slate-600/95 hover:to-slate-800/95 z-40"
+            className="hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 translate-x-3 w-10 h-10 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 items-center justify-center group z-40"
             title="Show Reports"
+            style={{
+              background: 'linear-gradient(140deg, rgba(255,113,103,0.85), rgba(157,140,240,0.8))',
+              border: '1px solid rgba(255,255,255,0.16)'
+            }}
           >
             <div className="relative">
               <svg
@@ -734,18 +826,21 @@ export default function Home() {
           </button>
         )}
       </div>
-      <SidebarNav
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        onAddTask={() => setIsModalOpen(true)}
-        onSelect={(view) => setActiveView(view)}
-        counts={counts}
-        projects={projects}
-        activeProjectId={activeProjectId}
-        onSelectProject={(projectId) => setActiveProjectId(projectId)}
-        onCreateProject={handleCreateProject}
-      />
+      <Suspense fallback={null}>
+        <SidebarNav
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          onAddTask={() => setIsModalOpen(true)}
+          onSelect={(view) => startTransition(() => setActiveView(view))}
+          counts={counts}
+          projects={projects}
+          activeProjectId={activeProjectId}
+          onSelectProject={(projectId) => startTransition(() => setActiveProjectId(projectId))}
+          onCreateProject={handleCreateProject}
+        />
+      </Suspense>
     </div>
     </PasswordProtection>
+    </Suspense>
   );
 }

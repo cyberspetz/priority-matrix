@@ -21,10 +21,10 @@ interface TaskListItemProps {
 }
 
 const quadrantAccent: Record<TaskListItemProps['quadrant'], string> = {
-  'urgent-important': 'md:border-l-4 md:border-emerald-400',
-  'not-urgent-important': 'md:border-l-4 md:border-sky-400',
-  'urgent-not-important': 'md:border-l-4 md:border-amber-400',
-  'not-urgent-not-important': 'md:border-l-4 md:border-slate-300',
+  'urgent-important': 'md:border-l-4',
+  'not-urgent-important': 'md:border-l-4',
+  'urgent-not-important': 'md:border-l-4',
+  'not-urgent-not-important': 'md:border-l-4',
 };
 
 function dueChip(due?: string) {
@@ -106,7 +106,20 @@ export default function TaskListItem({
           onOpenDetail?.(task.id);
         }
       }}
-      className={`group flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-3 shadow-sm transition hover:border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:px-4 md:py-4 ${quadrantAccent[quadrant]}`}
+      className={`group flex flex-col gap-2 rounded-2xl border px-3 py-3 shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)] md:px-4 md:py-4 ${quadrantAccent[quadrant]}`}
+      style={{
+        background: 'var(--color-surface-elevated)',
+        borderColor: 'var(--color-border)',
+        boxShadow: 'var(--shadow-soft)',
+        borderLeftColor:
+          quadrant === 'urgent-important'
+            ? 'var(--color-primary-500)'
+            : quadrant === 'not-urgent-important'
+              ? 'var(--color-secondary-500)'
+              : quadrant === 'urgent-not-important'
+                ? 'var(--color-warning)'
+                : 'rgba(148,163,184,0.6)'
+      }}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-3">
@@ -117,9 +130,12 @@ export default function TaskListItem({
               event.stopPropagation();
               onToggleComplete?.(task.id);
             }}
-            className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${
-              task.is_completed ? `${priorityMeta.circleBorder} ${priorityMeta.completedFill}` : `${priorityMeta.circleBorder} ${priorityMeta.circleFill}`
-            }`}
+            className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors"
+            style={{
+              borderColor: priorityMeta.circleBorderColor ?? '#e2e8f0',
+              background: task.is_completed ? priorityMeta.completedFillColor ?? 'var(--color-primary-500)' : priorityMeta.circleFillColor ?? 'transparent',
+              color: task.is_completed ? '#ffffff' : priorityMeta.circleBorderColor ?? 'var(--color-primary-500)'
+            }}
             aria-label={task.is_completed ? 'Mark incomplete' : 'Mark complete'}
           >
             {task.is_completed && (
@@ -130,13 +146,13 @@ export default function TaskListItem({
           </button>
 
           <div className="min-w-0 flex-1 space-y-1">
-            <div className={`text-[0.95rem] font-medium md:text-sm ${task.is_completed ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+          <div className={`text-[0.95rem] font-medium md:text-sm ${task.is_completed ? 'line-through' : ''}`} style={{ color: task.is_completed ? 'var(--color-text-muted)' : 'var(--color-text-900)' }}>
               {task.title}
             </div>
             { (task.notes || task.description) && (
-              <p className="text-[0.75rem] text-gray-500 md:text-xs line-clamp-2">{task.notes ?? task.description}</p>
+              <p className="text-[0.75rem] md:text-xs line-clamp-2" style={{ color: 'var(--color-text-muted)' }}>{task.notes ?? task.description}</p>
             )}
-            <div className="flex flex-wrap items-center gap-1.5 text-[0.7rem] md:text-xs" data-skip-task-detail="true">
+            <div className="flex flex-wrap items-center gap-1.5 text-[0.7rem] md:text-xs" style={{ color: 'var(--color-text-muted)' }} data-skip-task-detail="true">
               <button
                 type="button"
                 data-priority-pill
@@ -146,7 +162,11 @@ export default function TaskListItem({
                   event.stopPropagation();
                   onEnterEdit(task.id);
                 }}
-                className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${priorityMeta.badgeTone} ${priorityMeta.badgeText}`}
+                className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium"
+                style={{
+                  background: priorityMeta.badgeFillColor ?? 'rgba(255,113,103,0.18)',
+                  color: priorityMeta.badgeTextColor ?? 'var(--color-primary-600)'
+                }}
                 aria-label={`Adjust priority (${priorityMeta.flagLabel})`}
               >
                 <svg className={`h-[0.65rem] w-[0.65rem] ${priorityMeta.iconFill}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
@@ -163,7 +183,8 @@ export default function TaskListItem({
                       event.stopPropagation();
                       onEnterEdit(task.id);
                     }}
-                    className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${due.classes}`}
+                    className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium"
+                    style={{ background: 'rgba(54,183,180,0.16)', color: 'var(--color-secondary-500)' }}
                     aria-label={`Adjust schedule (${due.text})`}
                   >
                   <svg className="h-[0.7rem] w-[0.7rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -216,7 +237,8 @@ export default function TaskListItem({
         {onEnterEdit && (
           <button
             type="button"
-            className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+            className="inline-flex items-center gap-1 rounded-full px-2 py-1 transition"
+            style={{ color: 'var(--color-text-muted)', background: 'rgba(148,163,184,0.12)' }}
             onClick={(event) => {
               event.stopPropagation();
               onEnterEdit(task.id);

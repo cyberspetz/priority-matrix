@@ -35,7 +35,15 @@ export default function TaskCard({
 
   if (isEditing && onUpdate) {
     return (
-      <div ref={setNodeRef} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div
+        ref={setNodeRef}
+        className="rounded-2xl border p-4 shadow-sm"
+        style={{
+          background: 'var(--color-surface-elevated)',
+          borderColor: 'var(--color-border)',
+          boxShadow: 'var(--shadow-soft)'
+        }}
+      >
         <TaskInlineEditor
           task={task}
           projects={projects}
@@ -63,16 +71,21 @@ export default function TaskCard({
     <div
       id={`task-${task.id}`}
       ref={setNodeRef}
-      style={style}
+      style={{
+        ...style,
+        background: 'var(--color-surface-elevated)',
+        borderColor: 'var(--color-border)',
+        boxShadow: isDragging ? 'none' : 'var(--shadow-soft)',
+      }}
       {...(!isEditing ? listeners : {})}
       {...(!isEditing ? attributes : {})}
       onClick={(event) => {
         if (!onOpenDetail || isDragging) return;
         const target = event.target as HTMLElement;
-        if (target?.closest('[data-skip-task-detail="true"]')) return;
+        if (target?.closest('[data-skip-task-detail="true"], [data-card-text]')) return;
         onOpenDetail(task.id);
       }}
-      className={`relative z-30 group select-none rounded-2xl border border-gray-200 bg-white px-3 py-3 shadow-sm transition ${
+      className={`relative z-30 group select-none rounded-2xl border px-3 py-3 transition ${
         isDragging ? 'pointer-events-none scale-[1.01] opacity-0' : 'cursor-pointer'
       }`}
     >
@@ -86,9 +99,12 @@ export default function TaskCard({
               event.stopPropagation();
               onToggleComplete?.(task.id);
             }}
-            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
-              task.is_completed ? `${priorityMeta.circleBorder} ${priorityMeta.completedFill}` : `${priorityMeta.circleBorder} ${priorityMeta.circleFill}`
-            }`}
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition"
+            style={{
+              borderColor: priorityMeta.circleBorderColor ?? '#e2e8f0',
+              background: task.is_completed ? priorityMeta.completedFillColor ?? 'var(--color-primary-500)' : priorityMeta.circleFillColor ?? 'transparent',
+              color: task.is_completed ? '#ffffff' : priorityMeta.circleBorderColor ?? 'var(--color-primary-500)'
+            }}
             aria-label={task.is_completed ? 'Mark incomplete' : 'Mark complete'}
           >
             {task.is_completed && (
@@ -98,12 +114,12 @@ export default function TaskCard({
             )}
           </button>
 
-          <div className="min-w-0 flex-1 space-y-1">
-            <p className={`truncate text-sm font-semibold ${task.is_completed ? 'line-through text-gray-400' : 'text-gray-900'}`}>{task.title}</p>
+          <div className="min-w-0 flex-1 space-y-1" data-card-text>
+            <p className={`truncate text-sm font-semibold ${task.is_completed ? 'line-through' : ''}`} style={{ color: task.is_completed ? 'var(--color-text-muted)' : 'var(--color-text-900)' }}>{task.title}</p>
             {task.notes && (
-              <p className="text-xs text-gray-500 line-clamp-2">{task.notes}</p>
+              <p className="text-xs line-clamp-2" style={{ color: 'var(--color-text-muted)' }}>{task.notes}</p>
             )}
-            <div className="flex flex-wrap items-center gap-1.5 text-[0.65rem] text-gray-500" data-skip-task-detail="true">
+            <div className="flex flex-wrap items-center gap-1.5 text-[0.65rem]" style={{ color: 'var(--color-text-muted)' }} data-skip-task-detail="true">
               <button
                 type="button"
                 onClick={(event) => {
@@ -111,7 +127,11 @@ export default function TaskCard({
                   event.stopPropagation();
                   onEnterEdit?.(task.id);
                 }}
-                className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${priorityMeta.badgeTone} ${priorityMeta.badgeText}`}
+                className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium"
+                style={{
+                  background: priorityMeta.badgeFillColor ?? 'rgba(255,113,103,0.15)',
+                  color: priorityMeta.badgeTextColor ?? 'var(--color-primary-600)'
+                }}
               >
                 <svg className={`h-[0.65rem] w-[0.65rem] ${priorityMeta.iconFill}`} viewBox="0 0 20 20" fill="currentColor">
                   <path d="M5 3a1 1 0 011-1h8a1 1 0 01.8 1.6L13.25 7l1.55 2.4A1 1 0 0114 11H6v6a1 1 0 11-2 0V3z" />
@@ -126,7 +146,8 @@ export default function TaskCard({
                     event.stopPropagation();
                     onEnterEdit?.(task.id);
                   }}
-                  className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-1.5 py-0.5 font-medium text-blue-700"
+                  className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium"
+                  style={{ background: 'rgba(54,183,180,0.16)', color: 'var(--color-secondary-500)' }}
                 >
                   <svg className="h-[0.65rem] w-[0.65rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -136,15 +157,17 @@ export default function TaskCard({
               )}
               {task.deadline_at && !task.is_completed && (
                 <button
-                  type="button"
+              type="button"
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
                     onEnterEdit?.(task.id);
                   }}
-                  className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${
-                    isDeadlineOver ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-600'
-                  }`}
+                  className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium"
+                  style={{
+                    background: isDeadlineOver ? 'rgba(244,63,94,0.12)' : 'rgba(148,163,184,0.2)',
+                    color: isDeadlineOver ? '#e11d48' : 'var(--color-text-500)'
+                  }}
                 >
                   <svg className="h-[0.65rem] w-[0.65rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3" />
@@ -165,7 +188,8 @@ export default function TaskCard({
                 event.stopPropagation();
                 onEnterEdit(task.id);
               }}
-              className="rounded-full p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+              className="rounded-full p-1.5 transition"
+              style={{ color: 'var(--color-text-muted)' , background: 'rgba(148, 163, 184, 0.12)'}}
               aria-label="Edit task"
             >
               <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor">

@@ -1,26 +1,55 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-surface: #ffffff;
+  --color-surface-muted: #f5f7fb;
+  --color-surface-elevated: #ffffff;
+  --color-border: #e5e7eb;
+  --color-border-strong: #d4d7dd;
+  --color-text-900: #0f172a;
+  --color-text-700: #1f2937;
+  --color-text-500: #475569;
+  --color-text-muted: #94a3b8;
+  --color-primary-600: #f45b52;
+  --color-primary-500: #ff7167;
+  --color-primary-400: #ff8a7f;
+  --color-secondary-500: #36b7b4;
+  --color-secondary-400: #59c7c4;
+  --color-accent-500: #9d8cf0;
+  --color-positive: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #f97316;
+  --shadow-soft: 0 16px 40px rgba(15, 23, 42, 0.08);
+  --gradient-background: linear-gradient(135deg, rgba(255, 113, 103, 0.12), rgba(157, 140, 240, 0.1));
   --font-sans: 'Inter', 'system-ui', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
+@theme inline {
+  --color-background: var(--color-surface);
+  --color-foreground: var(--color-text-900);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --color-surface: #0f172a;
+    --color-surface-muted: #111c33;
+    --color-surface-elevated: #111c33;
+    --color-border: #1e2a42;
+    --color-border-strong: #27344f;
+    --color-text-900: #f8fafc;
+    --color-text-700: #e2e8f0;
+    --color-text-500: #cbd5f5;
+    --color-text-muted: #94a3b8;
+    --shadow-soft: 0 16px 40px rgba(15, 23, 42, 0.4);
+    --gradient-background: linear-gradient(135deg, rgba(255, 113, 103, 0.18), rgba(157, 140, 240, 0.16));
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-surface-muted);
+  color: var(--color-text-700);
+  font-family: var(--font-sans);
 }

@@ -24,7 +24,8 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
   const NavItem: React.FC<{ icon: React.ReactNode; label: string; count?: number; onClick: () => void }> = ({ icon, label, count, onClick }) => (
     <button
       onClick={() => { onClick(); onClose(); }}
-      className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-800"
+      className="w-full flex items-center justify-between px-3 py-2 rounded-lg transition"
+      style={{ color: 'var(--color-text-700)' }}
     >
       <span className="flex items-center gap-3">
         {icon}
@@ -56,14 +57,19 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
         className={`fixed top-0 left-0 h-full w-72 bg-white border-r border-gray-200 shadow-xl transform transition-transform duration-300 z-50 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
+        style={{
+          background: 'var(--color-surface)',
+          borderColor: 'var(--color-border)',
+          boxShadow: 'var(--shadow-soft)'
+        }}
       >
         <div className="p-4 flex items-center justify-between border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500" />
-            <div className="text-sm font-semibold text-gray-800">Menu</div>
+            <div className="w-8 h-8 rounded-full" style={{ background: 'linear-gradient(145deg, var(--color-primary-500), var(--color-accent-500))' }} />
+            <div className="text-sm font-semibold" style={{ color: 'var(--color-text-700)' }}>Menu</div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-md hover:bg-gray-100">
-            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button onClick={onClose} className="p-2 rounded-md transition" style={{ color: 'var(--color-text-muted)' }}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -72,7 +78,8 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
         <div className="p-4 space-y-2">
           <button
             onClick={() => { onAddTask(); onClose(); }}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-medium"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition"
+            style={{ background: 'rgba(255,113,103,0.15)', color: 'var(--color-primary-600)' }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m6-6H6" />
@@ -88,13 +95,13 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
               onClick={() => onSelect('inbox')}
             />
             <NavItem
-              icon={<svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+              icon={<svg className="w-5 h-5" style={{ color: 'var(--color-secondary-500)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
               label="Today"
               count={counts.today}
               onClick={() => onSelect('today')}
             />
             <NavItem
-              icon={<svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 1.343-3 3v6h6v-6c0-1.657-1.343-3-3-3z" /></svg>}
+              icon={<svg className="w-5 h-5" style={{ color: 'var(--color-accent-500)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 1.343-3 3v6h6v-6c0-1.657-1.343-3-3-3z" /></svg>}
               label="Upcoming"
               count={counts.upcoming}
               onClick={() => onSelect('upcoming')}
@@ -103,11 +110,12 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
 
           <div className="mt-6 border-t border-gray-100 pt-4">
             <div className="flex items-center justify-between px-1 mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Projects</span>
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>Projects</span>
               <button
                 type="button"
                 onClick={() => setIsProjectModalOpen(true)}
-                className="rounded-md p-1 text-gray-500 hover:bg-gray-100"
+                className="rounded-md p-1 transition"
+                style={{ color: 'var(--color-text-muted)' }}
                 title="Add project"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -119,7 +127,8 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
               <button
                 type="button"
                 onClick={() => { onSelectProject(null); onClose(); }}
-                className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium ${activeProjectId === null ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'}`}
+                className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium ${activeProjectId === null ? 'bg-[rgba(157,140,240,0.12)] text-[var(--color-text-900)]' : ''}`}
+                style={activeProjectId === null ? undefined : { color: 'var(--color-text-700)' }}
               >
                 All projects
               </button>
@@ -128,7 +137,8 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
                   key={project.id}
                   type="button"
                   onClick={() => { onSelectProject(project.id ?? null); onClose(); }}
-                  className={`w-full rounded-lg px-3 py-2 text-left text-sm ${project.id === activeProjectId ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-gray-100'}`}
+                  className={`w-full rounded-lg px-3 py-2 text-left text-sm ${project.id === activeProjectId ? 'bg-[rgba(255,113,103,0.15)] text-[var(--color-primary-600)]' : ''}`}
+                  style={project.id === activeProjectId ? undefined : { color: 'var(--color-text-700)' }}
                 >
                   {project.name}
                 </button>
@@ -139,7 +149,8 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
           <div className="pt-4 mt-6 border-t border-gray-100">
             <button
               onClick={() => { logout(); onClose(); }}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-500 hover:bg-gray-100"
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition"
+              style={{ color: 'var(--color-text-muted)' }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 012 2v1" />

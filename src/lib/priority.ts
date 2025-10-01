@@ -12,6 +12,11 @@ interface PriorityMeta {
   pillTone: string;
   iconFill: string;
   dotFill: string;
+  badgeFillColor?: string;
+  badgeTextColor?: string;
+  circleBorderColor?: string;
+  circleFillColor?: string;
+  completedFillColor?: string;
 }
 
 export const PRIORITY_META: Record<TaskPriority, PriorityMeta> = {
@@ -27,6 +32,11 @@ export const PRIORITY_META: Record<TaskPriority, PriorityMeta> = {
     pillTone: 'border border-rose-200 bg-rose-50 text-rose-700',
     iconFill: 'text-rose-500',
     dotFill: 'bg-rose-500',
+    badgeFillColor: 'rgba(255, 113, 103, 0.18)',
+    badgeTextColor: '#f45b52',
+    circleBorderColor: '#f45b52',
+    circleFillColor: 'rgba(255, 113, 103, 0.18)',
+    completedFillColor: '#f45b52',
   },
   p2: {
     name: 'High',
@@ -40,6 +50,11 @@ export const PRIORITY_META: Record<TaskPriority, PriorityMeta> = {
     pillTone: 'border border-amber-200 bg-amber-50 text-amber-700',
     iconFill: 'text-amber-500',
     dotFill: 'bg-amber-500',
+    badgeFillColor: 'rgba(245, 158, 11, 0.18)',
+    badgeTextColor: '#c2410c',
+    circleBorderColor: '#f59e0b',
+    circleFillColor: 'rgba(245, 158, 11, 0.2)',
+    completedFillColor: '#f59e0b',
   },
   p3: {
     name: 'Normal',
@@ -53,6 +68,11 @@ export const PRIORITY_META: Record<TaskPriority, PriorityMeta> = {
     pillTone: 'border border-sky-200 bg-sky-50 text-sky-700',
     iconFill: 'text-sky-500',
     dotFill: 'bg-sky-500',
+    badgeFillColor: 'rgba(37, 99, 235, 0.18)',
+    badgeTextColor: '#2563eb',
+    circleBorderColor: '#2563eb',
+    circleFillColor: 'rgba(37, 99, 235, 0.18)',
+    completedFillColor: '#2563eb',
   },
   p4: {
     name: 'Low',
@@ -66,6 +86,11 @@ export const PRIORITY_META: Record<TaskPriority, PriorityMeta> = {
     pillTone: 'border border-slate-200 bg-slate-50 text-slate-600',
     iconFill: 'text-slate-500',
     dotFill: 'bg-slate-500',
+    badgeFillColor: 'rgba(148, 163, 184, 0.2)',
+    badgeTextColor: '#475569',
+    circleBorderColor: '#94a3b8',
+    circleFillColor: 'rgba(148, 163, 184, 0.2)',
+    completedFillColor: '#94a3b8',
   },
 };
 

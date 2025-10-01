@@ -277,26 +277,35 @@ Generated on ${formatDate(currentDate)}
         onPointerDown={onClose}
       />
       <div
-        className="fixed right-0 top-0 z-40 h-full w-full max-w-xl bg-gray-100/95 backdrop-blur-sm border-l border-gray-300/60 shadow-2xl overflow-hidden"
+        className="fixed right-0 top-0 z-40 h-full w-full max-w-xl backdrop-blur-sm overflow-hidden"
+        style={{
+          background: 'rgba(245, 247, 251, 0.9)',
+          borderLeft: '1px solid var(--color-border)',
+          boxShadow: 'var(--shadow-soft)'
+        }}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
       {/* Premium Toggle Button - Inspired by high-end design */}
       <button
-        onClick={onClose}
-        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 w-10 h-10 bg-gradient-to-br from-slate-800/90 via-slate-700/90 to-slate-900/90 backdrop-blur-lg border border-white/10 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group hover:from-slate-700/95 hover:via-slate-600/95 hover:to-slate-800/95 z-50"
+         onClick={onClose}
+        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 w-10 h-10 backdrop-blur-md border rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group z-50"
+        style={{
+          background: 'linear-gradient(140deg, rgba(255,113,103,0.85), rgba(157,140,240,0.85))',
+          borderColor: 'rgba(255,255,255,0.4)'
+        }}
         title="Hide Reports"
       >
         <div className="relative">
           <svg
-            className="w-3 h-3 text-white/70 group-hover:text-white transition-colors duration-300"
+            className="w-3 h-3 text-white/80 group-hover:text-white transition-colors duration-300"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
           </svg>
-          <div className="absolute inset-0 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="absolute inset-0 bg-white/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         </div>
       </button>
 
@@ -304,16 +313,17 @@ Generated on ${formatDate(currentDate)}
         {/* Header */}
         <div className="p-6 border-b border-gray-200/50">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">📊 Reports</h2>
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-900)' }}>📊 Reports</h2>
 
             {/* Menu Button */}
             <div className="relative">
-              <button
-                onClick={() => {
-                  console.log('Menu button clicked, showMenu was:', showMenu);
-                  setShowMenu(!showMenu);
-                }}
-                className="p-2 hover:bg-white/60 bg-gray-200/40 rounded-lg transition-colors relative border border-gray-300/50"
+               <button
+                 onClick={() => {
+                   console.log('Menu button clicked, showMenu was:', showMenu);
+                   setShowMenu(!showMenu);
+                 }}
+                className="p-2 rounded-lg transition-colors relative"
+                style={{ background: 'rgba(255,255,255,0.6)', border: '1px solid var(--color-border)', color: 'var(--color-text-700)' }}
                 title="More options"
               >
                 <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,13 +333,16 @@ Generated on ${formatDate(currentDate)}
 
               {/* Dropdown Menu */}
               {showMenu && (
-                <div className="absolute right-0 top-full mt-1 w-48 bg-gray-100/98 backdrop-blur-sm rounded-lg shadow-xl border border-gray-300 py-1 z-[60]">
+                <div className="absolute right-0 top-full mt-1 w-48 backdrop-blur-md rounded-lg shadow-xl border py-1 z-[60]"
+                  style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)', boxShadow: 'var(--shadow-soft)' }}
+                >
                   <button
                     onClick={() => {
                       generateWeeklySummary();
                       setShowMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    className="w-full text-left px-4 py-2 text-sm flex items-center gap-2"
+                    style={{ color: 'var(--color-text-700)' }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -342,7 +355,8 @@ Generated on ${formatDate(currentDate)}
                       exportData();
                       setShowMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    className="w-full text-left px-4 py-2 text-sm flex items-center gap-2"
+                    style={{ color: 'var(--color-text-700)' }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -357,7 +371,8 @@ Generated on ${formatDate(currentDate)}
                       loadReportData();
                       setShowMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    className="w-full text-left px-4 py-2 text-sm flex items-center gap-2"
+                    style={{ color: 'var(--color-text-700)' }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -370,7 +385,7 @@ Generated on ${formatDate(currentDate)}
           </div>
 
           {/* View Tabs */}
-          <div className="flex space-x-1 bg-gray-200/70 rounded-lg p-1">
+          <div className="flex space-x-1 rounded-lg p-1" style={{ background: 'rgba(148,163,184,0.2)' }}>
             {([
               { id: 'today', label: '📅 Today' },
               { id: 'week', label: '📈 Week' },
@@ -381,9 +396,12 @@ Generated on ${formatDate(currentDate)}
                 onClick={() => setActiveView(tab.id)}
                 className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                   activeView === tab.id
-                    ? 'bg-gray-50/90 text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'shadow-sm'
+                    : ''
                 }`}
+                style={activeView === tab.id
+                  ? { background: 'var(--color-surface)', color: 'var(--color-primary-500)', boxShadow: 'var(--shadow-soft)' }
+                  : { color: 'var(--color-text-muted)' }}
               >
                 {tab.label}
               </button>
@@ -394,31 +412,31 @@ Generated on ${formatDate(currentDate)}
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+             <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-transparent" style={{ borderColor: 'var(--color-primary-500)' }}></div>
             </div>
           ) : (
             <>
               {activeView === 'today' && todayStats && (
-                <div className="space-y-4">
-                  <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">Today&apos;s Summary</h3>
+                 <div className="space-y-4">
+                  <div className="rounded-xl p-4" style={{ background: 'linear-gradient(120deg, rgba(54,183,180,0.12), rgba(157,140,240,0.12))' }}>
+                    <h3 className="font-semibold mb-3" style={{ color: 'var(--color-text-900)' }}>Today&apos;s Summary</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">{todayStats.completed}</div>
-                        <div className="text-sm text-gray-600">Completed</div>
+                        <div className="text-2xl font-bold" style={{ color: 'var(--color-secondary-500)' }}>{todayStats.completed}</div>
+                        <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Completed</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{todayStats.created}</div>
-                        <div className="text-sm text-gray-600">Created</div>
+                        <div className="text-2xl font-bold" style={{ color: 'var(--color-accent-500)' }}>{todayStats.created}</div>
+                        <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Created</div>
                       </div>
                     </div>
                     {todayStats.avgTime > 0 && (
                       <div className="mt-3 text-center">
-                        <div className="text-lg font-semibold text-gray-900">
+                        <div className="text-lg font-semibold" style={{ color: 'var(--color-text-900)' }}>
                           {formatTime(todayStats.avgTime)}
                         </div>
-                        <div className="text-sm text-gray-600">Avg. time per task</div>
+                        <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Avg. time per task</div>
                       </div>
                     )}
                   </div>
@@ -426,37 +444,37 @@ Generated on ${formatDate(currentDate)}
               )}
 
               {activeView === 'week' && weeklyReport && (
-                <div className="space-y-4">
-                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">This Week</h3>
+                 <div className="space-y-4">
+                  <div className="rounded-xl p-4" style={{ background: 'linear-gradient(120deg, rgba(157,140,240,0.12), rgba(255,113,103,0.15))' }}>
+                    <h3 className="font-semibold mb-3" style={{ color: 'var(--color-text-900)' }}>This Week</h3>
                     <div className="grid grid-cols-3 gap-3 mb-4">
                       <div className="text-center">
-                        <div className="text-xl font-bold text-purple-600">{weeklyReport.totalCompleted}</div>
-                        <div className="text-xs text-gray-600">Completed</div>
+                        <div className="text-xl font-bold" style={{ color: 'var(--color-accent-500)' }}>{weeklyReport.totalCompleted}</div>
+                        <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Completed</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-xl font-bold text-blue-600">{weeklyReport.totalCreated}</div>
-                        <div className="text-xs text-gray-600">Created</div>
+                        <div className="text-xl font-bold" style={{ color: 'var(--color-secondary-500)' }}>{weeklyReport.totalCreated}</div>
+                        <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Created</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-xl font-bold text-green-600">{Math.round(weeklyReport.productivityScore)}%</div>
-                        <div className="text-xs text-gray-600">Productivity</div>
+                        <div className="text-xl font-bold" style={{ color: 'var(--color-primary-500)' }}>{Math.round(weeklyReport.productivityScore)}%</div>
+                        <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Productivity</div>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <h4 className="font-medium text-gray-900">Daily Breakdown</h4>
+                    <h4 className="font-medium" style={{ color: 'var(--color-text-900)' }}>Daily Breakdown</h4>
                     {weeklyReport.days.map((day) => (
-                      <div key={day.date} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={day.date} className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'rgba(148,163,184,0.16)' }}>
                         <div className="flex items-center space-x-3">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium" style={{ color: 'var(--color-text-900)' }}>
                             {formatDate(day.date)}
                           </div>
                         </div>
                         <div className="flex items-center space-x-4 text-sm">
-                          <span className="text-green-600 font-medium">✅ {day.completed}</span>
-                          <span className="text-blue-600 font-medium">➕ {day.created}</span>
+                          <span className="font-medium" style={{ color: 'var(--color-secondary-500)' }}>✅ {day.completed}</span>
+                          <span className="font-medium" style={{ color: 'var(--color-accent-500)' }}>➕ {day.created}</span>
                         </div>
                       </div>
                     ))}
@@ -465,22 +483,22 @@ Generated on ${formatDate(currentDate)}
               )}
 
               {activeView === 'overdue' && (
-                <div className="space-y-4">
-                  <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">⚠️ Overdue Tasks</h3>
+                 <div className="space-y-4">
+                  <div className="rounded-xl p-4" style={{ background: 'linear-gradient(120deg, rgba(255,113,103,0.15), rgba(255,176,54,0.12))' }}>
+                    <h3 className="font-semibold mb-3" style={{ color: 'var(--color-text-900)' }}>⚠️ Overdue Tasks</h3>
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-red-600">{overdueTasks.length}</div>
-                      <div className="text-sm text-gray-600">Tasks past due date</div>
+                      <div className="text-3xl font-bold" style={{ color: 'var(--color-danger)' }}>{overdueTasks.length}</div>
+                      <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Tasks past due date</div>
                     </div>
                   </div>
 
                   {overdueTasks.length > 0 && (
                     <div className="space-y-2">
-                      <h4 className="font-medium text-gray-900">Overdue Items</h4>
+                      <h4 className="font-medium" style={{ color: 'var(--color-text-900)' }}>Overdue Items</h4>
                       {overdueTasks.slice(0, 5).map(task => (
-                        <div key={task.id} className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                          <div className="font-medium text-gray-900 text-sm">{task.title}</div>
-                          <div className="text-xs text-red-600">
+                        <div key={task.id} className="p-3 rounded-lg" style={{ background: 'rgba(255,113,103,0.12)', border: '1px solid rgba(255,113,103,0.2)' }}>
+                          <div className="font-medium text-sm" style={{ color: 'var(--color-text-900)' }}>{task.title}</div>
+                          <div className="text-xs" style={{ color: 'var(--color-danger)' }}>
                             Due: {task.due_date ? formatDate(task.due_date) : 'No date'}
                           </div>
                         </div>

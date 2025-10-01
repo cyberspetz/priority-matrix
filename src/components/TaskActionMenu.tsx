@@ -13,7 +13,7 @@ interface TaskActionMenuProps {
 
 export default function TaskActionMenu({ id, title, onArchive, onOpenDetail, onDelete }: TaskActionMenuProps) {
   const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState<{ top?: number; bottom?: number; left: number; openUp?: boolean }>({ left: 0, top: 0 });
+  const [coords, setCoords] = useState<{ top?: number; bottom?: number; left: number; openUp?: boolean; width?: number }>({ left: 0, top: 0 });
   const [confirmOpen, setConfirmOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement | null>(null);
 
@@ -27,14 +27,15 @@ export default function TaskActionMenu({ id, title, onArchive, onOpenDetail, onD
     const spaceBelow = window.innerHeight - rect.bottom;
     const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
     const maxLeft = Math.max(margin, viewportWidth - menuWidth - margin);
-    const left = Math.min(Math.max(margin, rect.left), maxLeft);
+    const left = Math.min(Math.max(margin, rect.left + rect.width - menuWidth), maxLeft);
+        const width = rect.width;
 
     if (openUp) {
       const bottom = Math.max(margin, window.innerHeight - rect.top + margin);
-      setCoords({ bottom, left, openUp: true });
+      setCoords({ bottom, left, openUp: true, width });
     } else {
       const top = Math.max(margin, rect.bottom + margin);
-      setCoords({ top, left, openUp: false });
+      setCoords({ top, left, openUp: false, width });
     }
     setOpen(true);
   };
@@ -53,6 +54,18 @@ export default function TaskActionMenu({ id, title, onArchive, onOpenDetail, onD
     return () => document.removeEventListener('keydown', onKey);
   }, [confirmOpen]);
 
+  const panelStyle = {
+    position: 'fixed' as const,
+    left: Math.min(Math.max(8, coords.left + (coords.width ?? 0) - 240), window.innerWidth - 248),
+    top: coords.openUp ? undefined : coords.top,
+    bottom: coords.openUp ? coords.bottom : undefined,
+    zIndex: 99999,
+    background: 'var(--color-surface)',
+    boxShadow: 'var(--shadow-soft)',
+    border: '1px solid var(--color-border)',
+    color: 'var(--color-text-700)'
+  };
+
   const Panel = (
     <Transition
       as={Fragment}
@@ -60,12 +73,7 @@ export default function TaskActionMenu({ id, title, onArchive, onOpenDetail, onD
       enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100"
       leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95"
     >
-      <div
-        style={{ position: 'fixed', top: coords.openUp ? undefined : coords.top, bottom: coords.openUp ? coords.bottom : undefined, left: coords.left, zIndex: 99999 }}
-        className="w-60 rounded-lg bg-white shadow-lg ring-1 ring-black/5 divide-y divide-gray-100"
-        onPointerDown={(e) => { e.stopPropagation(); }}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div style={panelStyle} className="w-60 rounded-lg" onPointerDown={(e) => { e.stopPropagation(); }} onClick={(e) => e.stopPropagation()}>
         {onOpenDetail && (
           <button
             type="button"
@@ -77,9 +85,10 @@ export default function TaskActionMenu({ id, title, onArchive, onOpenDetail, onD
               setOpen(false);
               onOpenDetail(id);
             }}
-            className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+            className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm transition"
+            style={{ color: 'var(--color-text-700)' }}
           >
-            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" style={{ color: 'var(--color-text-muted)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 010 5.292M15 21H9a2 2 0 01-2-2v-1a4 4 0 014-4h2a4 4 0 014 4v1a2 2 0 01-2 2zm-3-9a3 3 0 100-6 3 3 0 000 6z" />
             </svg>
             Edit details
@@ -96,9 +105,10 @@ export default function TaskActionMenu({ id, title, onArchive, onOpenDetail, onD
               setOpen(false);
               onArchive?.(id);
             }}
-            className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+            className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm transition"
+            style={{ color: 'var(--color-text-700)' }}
           >
-            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" style={{ color: 'var(--color-warning)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v16h16V8.828A2 2 0 0019.414 7L14 1.586A2 2 0 0012.586 1H6a2 2 0 00-2 2z" />
             </svg>
             Archive task
@@ -109,11 +119,12 @@ export default function TaskActionMenu({ id, title, onArchive, onOpenDetail, onD
           data-testid="action-delete"
           onPointerDown={(e)=>{e.preventDefault(); e.stopPropagation();}}
           onClick={(e)=>{e.preventDefault(); e.stopPropagation(); setOpen(false); setConfirmOpen(true);}}
-          className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+          className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm"
+          style={{ color: 'var(--color-danger)' }}
         >
-          <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
           Delete
-          <span className="ml-auto text-xs text-gray-400">⌘⌫</span>
+          <span className="ml-auto text-xs" style={{ color: 'var(--color-text-muted)' }}>⌘⌫</span>
         </button>
       </div>
     </Transition>
@@ -124,7 +135,8 @@ export default function TaskActionMenu({ id, title, onArchive, onOpenDetail, onD
       <button
         ref={btnRef}
         title="More actions"
-        className="p-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+        className="p-1.5 rounded-md transition"
+        style={{ color: 'var(--color-text-muted)' }}
         onPointerDown={(e)=>e.stopPropagation()} onMouseDown={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()}
         onClick={(e)=>{e.preventDefault(); e.stopPropagation(); openMenu();}}
       >

@@ -91,15 +91,16 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask }: AddTaskModa
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-xl bg-white shadow-2xl transition-all border border-gray-200">
+              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-xl shadow-2xl transition-all border" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', boxShadow: 'var(--shadow-soft)' }}>
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-6">
-                    <Dialog.Title className="text-xl font-semibold text-gray-900">
+                    <Dialog.Title className="text-xl font-semibold" style={{ color: 'var(--color-text-900)' }}>
                       Add New Task
                     </Dialog.Title>
                     <button
                       onClick={handleClose}
-                      className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-md hover:bg-gray-100"
+                      className="transition-colors p-1 rounded-md"
+                      style={{ color: 'var(--color-text-muted)' }}
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -113,7 +114,13 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask }: AddTaskModa
                         type="text"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        className="w-full px-4 py-3 text-gray-900 placeholder-gray-500 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                        className="w-full px-4 py-3 border rounded-lg focus:outline-none transition-colors"
+                        style={{
+                          background: 'var(--color-surface-muted)',
+                          borderColor: 'var(--color-border)',
+                          color: 'var(--color-text-900)',
+                          '--tw-ring-color': 'var(--color-primary-500)'
+                        }}
                         placeholder="What needs to be done?"
                         autoFocus
                       />
@@ -122,12 +129,13 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask }: AddTaskModa
                     {/* Due Date Section - Todoist Inspired */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-gray-700">Due date</label>
+                        <label className="text-sm font-medium" style={{ color: 'var(--color-text-700)' }}>Due date</label>
                         {dueDate && (
                           <button
                             type="button"
                             onClick={() => setDueDate('')}
-                            className="text-xs text-gray-500 hover:text-red-500 transition-colors"
+                            className="text-xs transition-colors"
+                            style={{ color: 'var(--color-text-muted)' }}
                           >
                             Clear
                           </button>
@@ -141,11 +149,10 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask }: AddTaskModa
                             key={option.label}
                             type="button"
                             onClick={() => setDueDate(option.value)}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                              dueDate === option.value
-                                ? option.color + ' ring-2 ring-offset-2 ring-current'
-                                : 'text-gray-600 bg-gray-100 hover:bg-gray-200'
-                            }`}
+                            className="px-3 py-1.5 text-xs font-medium rounded-full transition-colors"
+                            style={dueDate === option.value
+                              ? { background: 'rgba(54,183,180,0.16)', color: 'var(--color-secondary-500)', boxShadow: '0 0 0 2px rgba(54,183,180,0.25)' }
+                              : { background: 'rgba(148,163,184,0.16)', color: 'var(--color-text-muted)' }}
                           >
                             {option.label}
                           </button>
@@ -153,7 +160,8 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask }: AddTaskModa
                         <button
                           type="button"
                           onClick={() => setShowDatePicker(!showDatePicker)}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+                          className="px-3 py-1.5 text-xs font-medium rounded-full transition-colors"
+                          style={{ background: 'rgba(148,163,184,0.16)', color: 'var(--color-text-700)' }}
                         >
                           📅 Pick date
                         </button>
@@ -161,7 +169,7 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask }: AddTaskModa
 
                       {/* Custom Date Picker */}
                       {showDatePicker && (
-                        <div className="p-3 bg-gray-50 rounded-lg">
+                        <div className="p-3 rounded-lg" style={{ background: 'var(--color-surface-muted)' }}>
                           <input
                             type="date"
                             value={dueDate}
@@ -169,7 +177,8 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask }: AddTaskModa
                               setDueDate(e.target.value);
                               setShowDatePicker(false);
                             }}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            className="w-full px-3 py-2 text-sm rounded-md focus:outline-none"
+                            style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-700)' }}
                             min={new Date().toISOString().split('T')[0]}
                           />
                         </div>
@@ -177,11 +186,11 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask }: AddTaskModa
 
                       {/* Selected Date Display */}
                       {dueDate && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-text-700)' }}>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          <span className="text-gray-700">Due: {formatDueDate(dueDate)}</span>
+                          <span>Due: {formatDueDate(dueDate)}</span>
                         </div>
                       )}
                     </div>
@@ -189,48 +198,56 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask }: AddTaskModa
                     {/* Deadline Section */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-gray-700">Deadline</label>
+                        <label className="text-sm font-medium" style={{ color: 'var(--color-text-700)' }}>Deadline</label>
                         {deadlineAt && (
                           <button
                             type="button"
                             onClick={() => setDeadlineAt('')}
-                            className="text-xs text-gray-500 hover:text-red-500 transition-colors"
+                            className="text-xs transition-colors"
+                            style={{ color: 'var(--color-text-muted)' }}
                           >
                             Clear
                           </button>
                         )}
                       </div>
 
-                      <div>
+                      <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => setShowDeadlinePicker(!showDeadlinePicker)}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+                          className="px-3 py-1.5 text-xs font-medium rounded-full border"
+                          style={{
+                            borderColor: deadlineAt ? 'rgba(244,63,94,0.3)' : 'var(--color-border)',
+                            background: deadlineAt ? 'rgba(244,63,94,0.12)' : 'transparent',
+                            color: deadlineAt ? 'var(--color-danger)' : 'var(--color-text-muted)'
+                          }}
                         >
-                          ⏰ Pick deadline
+                          ⏳ Set deadline
                         </button>
                       </div>
 
                       {showDeadlinePicker && (
-                        <div className="p-3 bg-gray-50 rounded-lg">
+                        <div className="p-3 rounded-lg" style={{ background: 'var(--color-surface-muted)' }}>
                           <input
-                            type="datetime-local"
+                            type="date"
                             value={deadlineAt}
                             onChange={(e) => {
                               setDeadlineAt(e.target.value);
                               setShowDeadlinePicker(false);
                             }}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            className="w-full px-3 py-2 text-sm rounded-md focus:outline-none"
+                            style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-700)' }}
+                            min={new Date().toISOString().split('T')[0]}
                           />
                         </div>
                       )}
 
                       {deadlineAt && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-text-700)' }}>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3" />
                           </svg>
-                          <span className="text-gray-700">Deadline: {new Date(deadlineAt).toLocaleString()}</span>
+                          <span>Deadline: {new Date(deadlineAt).toLocaleString()}</span>
                         </div>
                       )}
                     </div>
