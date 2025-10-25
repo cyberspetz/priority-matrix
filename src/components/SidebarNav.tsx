@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { usePasswordProtection } from './PasswordProtection';
 import ProjectModal from './ProjectModal';
+import ThemeSwitcher from './ThemeSwitcher';
 import type { Project, ProjectLayout } from '@/lib/supabaseClient';
 
 type View = 'inbox' | 'today' | 'upcoming';
@@ -21,6 +22,7 @@ interface SidebarNavProps {
 export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, counts, projects, activeProjectId, onSelectProject, onCreateProject }: SidebarNavProps) {
   const { logout } = usePasswordProtection();
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isThemeSwitcherOpen, setIsThemeSwitcherOpen] = useState(false);
   const NavItem: React.FC<{ icon: React.ReactNode; label: string; count?: number; onClick: () => void }> = ({ icon, label, count, onClick }) => (
     <button
       onClick={() => { onClick(); onClose(); }}
@@ -146,7 +148,17 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
             </div>
           </div>
 
-          <div className="pt-4 mt-6 border-t border-gray-100">
+          <div className="pt-4 mt-6 border-t border-gray-100 space-y-1">
+            <button
+              onClick={() => setIsThemeSwitcherOpen(true)}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+              </svg>
+              <span className="text-sm font-medium">Theme</span>
+            </button>
             <button
               onClick={() => { logout(); onClose(); }}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition"
@@ -164,6 +176,10 @@ export default function SidebarNav({ isOpen, onClose, onSelect, onAddTask, count
         isOpen={isProjectModalOpen}
         onClose={() => setIsProjectModalOpen(false)}
         onSubmit={handleProjectSubmit}
+      />
+      <ThemeSwitcher
+        isOpen={isThemeSwitcherOpen}
+        onClose={() => setIsThemeSwitcherOpen(false)}
       />
     </>
   );

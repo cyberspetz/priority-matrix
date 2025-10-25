@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* Default Theme (Original) - Light Mode */
 :root {
   --color-surface: #ffffff;
   --color-surface-muted: #f5f7fb;
@@ -25,15 +26,57 @@
   --font-mono: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
-@theme inline {
-  --color-background: var(--color-surface);
-  --color-foreground: var(--color-text-900);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
+/* Kale Theme - Light Mode */
+:root[data-theme="kale-light"] {
+  --color-surface: #ffffff;
+  --color-surface-muted: #f1f8f4;
+  --color-surface-elevated: #ffffff;
+  --color-border: #d1e7dd;
+  --color-border-strong: #b7ddc8;
+  --color-text-900: #0d3818;
+  --color-text-700: #1a5229;
+  --color-text-500: #2d6b3d;
+  --color-text-muted: #5a8e6b;
+  --color-primary-600: #1e6f2e;
+  --color-primary-500: #2d8f3c;
+  --color-primary-400: #4caf50;
+  --color-secondary-500: #43a047;
+  --color-secondary-400: #66bb6a;
+  --color-accent-500: #7cb342;
+  --color-positive: #2e7d32;
+  --color-warning: #f9a825;
+  --color-danger: #d32f2f;
+  --shadow-soft: 0 16px 40px rgba(45, 143, 60, 0.12);
+  --gradient-background: linear-gradient(135deg, rgba(76, 175, 80, 0.08), rgba(124, 179, 66, 0.06));
 }
 
+/* Kale Theme - Dark Mode */
+:root[data-theme="kale-dark"] {
+  --color-surface: #0d1f12;
+  --color-surface-muted: #0a1a0e;
+  --color-surface-elevated: #1a2f1e;
+  --color-border: #234a2d;
+  --color-border-strong: #2d5a39;
+  --color-text-900: #e8f5e9;
+  --color-text-700: #c8e6c9;
+  --color-text-500: #a5d6a7;
+  --color-text-muted: #81c784;
+  --color-primary-600: #7cb342;
+  --color-primary-500: #66bb6a;
+  --color-primary-400: #81c784;
+  --color-secondary-500: #4caf50;
+  --color-secondary-400: #66bb6a;
+  --color-accent-500: #9ccc65;
+  --color-positive: #66bb6a;
+  --color-warning: #fdd835;
+  --color-danger: #ef5350;
+  --shadow-soft: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --gradient-background: linear-gradient(135deg, rgba(102, 187, 106, 0.12), rgba(124, 179, 66, 0.08));
+}
+
+/* Default Theme - Dark Mode (auto dark mode) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --color-surface: #0f172a;
     --color-surface-muted: #111c33;
     --color-surface-elevated: #111c33;
@@ -46,6 +89,37 @@
     --shadow-soft: 0 16px 40px rgba(15, 23, 42, 0.4);
     --gradient-background: linear-gradient(135deg, rgba(255, 113, 103, 0.18), rgba(157, 140, 240, 0.16));
   }
+}
+
+/* Original Dark Theme (when explicitly selected) */
+:root[data-theme="default-dark"] {
+  --color-surface: #0f172a;
+  --color-surface-muted: #111c33;
+  --color-surface-elevated: #111c33;
+  --color-border: #1e2a42;
+  --color-border-strong: #27344f;
+  --color-text-900: #f8fafc;
+  --color-text-700: #e2e8f0;
+  --color-text-500: #cbd5f5;
+  --color-text-muted: #94a3b8;
+  --color-primary-600: #f45b52;
+  --color-primary-500: #ff7167;
+  --color-primary-400: #ff8a7f;
+  --color-secondary-500: #36b7b4;
+  --color-secondary-400: #59c7c4;
+  --color-accent-500: #9d8cf0;
+  --color-positive: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #f97316;
+  --shadow-soft: 0 16px 40px rgba(15, 23, 42, 0.4);
+  --gradient-background: linear-gradient(135deg, rgba(255, 113, 103, 0.18), rgba(157, 140, 240, 0.16));
+}
+
+@theme inline {
+  --color-background: var(--color-surface);
+  --color-foreground: var(--color-text-900);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
 body {
