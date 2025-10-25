@@ -89,8 +89,8 @@ export default function TaskCard({
         isDragging ? 'pointer-events-none scale-[1.01] opacity-0' : 'cursor-pointer'
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
           <button
             type="button"
             data-skip-task-detail="true"
@@ -179,7 +179,7 @@ export default function TaskCard({
           </div>
         </div>
 
-        <div className="flex items-start gap-1" data-skip-task-detail="true">
+        <div className="flex items-start gap-1 shrink-0" data-skip-task-detail="true">
           {onEnterEdit && (
             <button
               type="button"
