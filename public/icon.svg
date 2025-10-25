@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="white"/>
+
+  <!-- 2x2 Grid representing the Eisenhower Matrix -->
+  <!-- Top-left: Urgent & Important (Emerald) -->
+  <rect x="60" y="60" width="176" height="176" rx="24" fill="#10b981"/>
+
+  <!-- Top-right: Not Urgent & Important (Sky) -->
+  <rect x="276" y="60" width="176" height="176" rx="24" fill="#0ea5e9"/>
+
+  <!-- Bottom-left: Urgent & Not Important (Amber) -->
+  <rect x="60" y="276" width="176" height="176" rx="24" fill="#f59e0b"/>
+
+  <!-- Bottom-right: Not Urgent & Not Important (Slate) -->
+  <rect x="276" y="276" width="176" height="176" rx="24" fill="#64748b"/>
+
+  <!-- Subtle center lines to define quadrants -->
+  <line x1="256" y1="84" x2="256" y2="428" stroke="#f3f4f6" stroke-width="8" stroke-linecap="round"/>
+  <line x1="84" y1="256" x2="428" y2="256" stroke="#f3f4f6" stroke-width="8" stroke-linecap="round"/>
+</svg>
