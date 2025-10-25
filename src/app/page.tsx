@@ -540,7 +540,7 @@ export default function Home() {
               onDragEnd={handleDragEnd}
               onDragCancel={handleDragCancel}
             >
-              <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 md:mt-0 md:gap-6 md:h-[calc(100vh-220px)]">
+              <div className="mt-12 w-full max-w-2xl mx-auto grid grid-cols-1 gap-4 sm:grid-cols-2 md:mt-0 md:gap-6 md:h-[calc(100vh-220px)] sm:max-w-none">
                 <Quadrant
                   id="urgent-important"
                   title="Do First"
