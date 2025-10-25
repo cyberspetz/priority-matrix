@@ -71,7 +71,7 @@ export default function Quadrant({ id, title, description, tasks, accentColor, o
   return (
     <div
       ref={setNodeRef}
-      className={`${getQuadrantStyles()} max-w-md mx-auto md:mx-0 md:max-w-none`}
+      className={`${getQuadrantStyles()}`}
       style={{
         background: 'var(--color-surface-elevated)',
         borderColor: mounted && isOver ? 'var(--color-primary-400)' : 'var(--color-border)',
