@@ -16,6 +16,9 @@ const TaskListItem = lazy(() => import('@/components/TaskListItem'));
 const TaskDetailSheet = lazy(() => import('@/components/TaskDetailSheet'));
 const ReportsSidebar = lazy(() => import('@/components/ReportsSidebar'));
 const PasswordProtection = lazy(() => import('@/components/PasswordProtection'));
+const MobileQuadrantList = lazy(() => import('@/components/MobileQuadrantList'));
+const QuadrantFocusView = lazy(() => import('@/components/QuadrantFocusView'));
+const SmartPriorityPicker = lazy(() => import('@/components/SmartPriorityPicker'));
 
 interface FluidConfig {
   intensity: number;
@@ -57,6 +60,9 @@ export default function Home() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [fluidEnabled, setFluidEnabled] = useState(true);
+  const [focusedQuadrantId, setFocusedQuadrantId] = useState<string | null>(null);
+  const [showSmartPicker, setShowSmartPicker] = useState(false);
+  const [preselectedQuadrant, setPreselectedQuadrant] = useState<Task['quadrant'] | null>(null);
 
   const syncTasks = (updater: SetStateAction<Task[]>) => {
     setTasks(prev => {
@@ -329,9 +335,10 @@ export default function Home() {
   const addTask = async (title: string, dueDate?: string, deadlineAt?: string) => {
     try {
       const fallbackProjectId = activeProjectId ?? projects.find(p => p.is_default)?.id ?? projects[0]?.id;
+      const quadrant = preselectedQuadrant ?? 'urgent-important';
       const newTask = await createTask(
         title,
-        'urgent-important',
+        quadrant,
         undefined,
         dueDate,
         undefined,
@@ -343,9 +350,24 @@ export default function Home() {
         fallbackProjectId ?? undefined
       );
       syncTasks(prevTasks => [...prevTasks, newTask]);
+      setPreselectedQuadrant(null); // Reset after creating task
     } catch (error) {
       console.error('Failed to create task:', error);
     }
+  };
+
+  const handleSmartPickerSelect = (quadrantId: Task['quadrant']) => {
+    setPreselectedQuadrant(quadrantId);
+    setShowSmartPicker(false);
+    setIsModalOpen(true);
+  };
+
+  const openFocusMode = (quadrantId: string) => {
+    setFocusedQuadrantId(quadrantId);
+  };
+
+  const closeFocusMode = () => {
+    setFocusedQuadrantId(null);
   };
 
   const deleteTask = async (id: string) => {
@@ -532,16 +554,107 @@ export default function Home() {
           </div>
         ) : (
           activeView === 'inbox' ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCorners}
-              onDragStart={handleDragStart}
-              onDragMove={handleDragMove}
-              onDragEnd={handleDragEnd}
-              onDragCancel={handleDragCancel}
-            >
-              <div className="mt-12 w-full max-w-2xl mx-auto grid grid-cols-1 gap-4 sm:grid-cols-2 md:mt-0 md:gap-6 md:h-[calc(100vh-220px)] sm:max-w-none">
-                <Quadrant
+            focusedQuadrantId ? (
+              <Suspense fallback={<div>Loading...</div>}>
+                <QuadrantFocusView
+                  quadrantId={focusedQuadrantId}
+                  title={
+                    focusedQuadrantId === 'urgent-important' ? 'Do First' :
+                    focusedQuadrantId === 'not-urgent-important' ? 'Schedule' :
+                    focusedQuadrantId === 'urgent-not-important' ? 'Delegate' :
+                    'Eliminate'
+                  }
+                  description={
+                    focusedQuadrantId === 'urgent-important' ? 'Urgent & Important' :
+                    focusedQuadrantId === 'not-urgent-important' ? 'Not Urgent & Important' :
+                    focusedQuadrantId === 'urgent-not-important' ? 'Urgent & Not Important' :
+                    'Not Urgent & Not Important'
+                  }
+                  emoji={
+                    focusedQuadrantId === 'urgent-important' ? '🔥' :
+                    focusedQuadrantId === 'not-urgent-important' ? '📅' :
+                    focusedQuadrantId === 'urgent-not-important' ? '👥' :
+                    '🗑️'
+                  }
+                  tasks={getTasksByQuadrant(focusedQuadrantId as Task['quadrant'])}
+                  onBack={closeFocusMode}
+                  onDeleteTask={deleteTask}
+                  onToggleComplete={toggleTaskComplete}
+                  onUpdateTask={updateTaskFields}
+                  onOpenDetail={openTaskDetail}
+                  onArchiveTask={archiveTaskLocal}
+                  projects={projects}
+                  editingTaskId={editingTaskId}
+                  onEnterEdit={(id) => startTransition(() => setEditingTaskId(id))}
+                  onExitEdit={() => startTransition(() => setEditingTaskId(null))}
+                />
+              </Suspense>
+            ) : (
+              <>
+                {/* Mobile: Vertical List */}
+                <div className="mt-12 md:mt-0 sm:hidden">
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <MobileQuadrantList
+                      quadrants={[
+                        {
+                          id: 'urgent-important',
+                          title: 'Do First',
+                          description: 'Urgent & Important',
+                          emoji: '🔥',
+                          accentColor: 'bg-emerald-500',
+                          tasks: getTasksByQuadrant('urgent-important'),
+                        },
+                        {
+                          id: 'not-urgent-important',
+                          title: 'Schedule',
+                          description: 'Not Urgent & Important',
+                          emoji: '📅',
+                          accentColor: 'bg-sky-500',
+                          tasks: getTasksByQuadrant('not-urgent-important'),
+                        },
+                        {
+                          id: 'urgent-not-important',
+                          title: 'Delegate',
+                          description: 'Urgent & Not Important',
+                          emoji: '👥',
+                          accentColor: 'bg-amber-500',
+                          tasks: getTasksByQuadrant('urgent-not-important'),
+                        },
+                        {
+                          id: 'not-urgent-not-important',
+                          title: 'Eliminate',
+                          description: 'Not Urgent & Not Important',
+                          emoji: '🗑️',
+                          accentColor: 'bg-slate-500',
+                          tasks: getTasksByQuadrant('not-urgent-not-important'),
+                        },
+                      ]}
+                      onDeleteTask={deleteTask}
+                      onToggleComplete={toggleTaskComplete}
+                      onUpdateTask={updateTaskFields}
+                      onOpenDetail={openTaskDetail}
+                      onArchiveTask={archiveTaskLocal}
+                      onViewQuadrant={openFocusMode}
+                      projects={projects}
+                      editingTaskId={editingTaskId}
+                      onEnterEdit={(id) => startTransition(() => setEditingTaskId(id))}
+                      onExitEdit={() => startTransition(() => setEditingTaskId(null))}
+                    />
+                  </Suspense>
+                </div>
+
+                {/* Tablet/Desktop: Grid with Drag & Drop */}
+                <div className="hidden sm:block">
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCorners}
+                    onDragStart={handleDragStart}
+                    onDragMove={handleDragMove}
+                    onDragEnd={handleDragEnd}
+                    onDragCancel={handleDragCancel}
+                  >
+                    <div className="mt-12 w-full max-w-2xl mx-auto grid grid-cols-1 gap-4 sm:grid-cols-2 md:mt-0 md:gap-6 md:h-[calc(100vh-220px)] sm:max-w-none">
+                      <Quadrant
                   id="urgent-important"
                   title="Do First"
                   description="Urgent & Important"
@@ -640,8 +753,11 @@ export default function Home() {
                     </div>
                   );
                 })()}
-              </DragOverlay>
-            </DndContext>
+                    </DragOverlay>
+                  </DndContext>
+                </div>
+              </>
+            )
           ) : activeView === 'today' ? (
             <div className="mt-12 space-y-3 w-full max-w-2xl mx-auto md:mt-0">
               {todayTasks.length === 0 && <div className="text-sm text-gray-500">No tasks for today.</div>}
@@ -791,8 +907,8 @@ export default function Home() {
 
           <button
           type="button"
-          onClick={() => setIsModalOpen(true)}
-          className="md:hidden fixed bottom-6 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-xl transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          onClick={() => activeView === 'inbox' && !focusedQuadrantId ? setShowSmartPicker(true) : setIsModalOpen(true)}
+          className="md:hidden fixed bottom-6 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-xl transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-95"
             style={{ background: 'var(--color-primary-500)', boxShadow: 'var(--shadow-soft)' }}
           aria-label="Add task"
         >
@@ -800,6 +916,15 @@ export default function Home() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 5v14m7-7H5" />
           </svg>
         </button>
+
+        {/* Smart Priority Picker */}
+        <Suspense fallback={null}>
+          <SmartPriorityPicker
+            isOpen={showSmartPicker}
+            onClose={() => setShowSmartPicker(false)}
+            onSelectQuadrant={handleSmartPickerSelect}
+          />
+        </Suspense>
 
         {/* Premium Floating Toggle Button - hidden on mobile */}
         {!isReportsOpen && (
