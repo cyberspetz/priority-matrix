@@ -16,6 +16,7 @@ interface QuadrantOption {
   emoji: string;
   color: string;
   borderColor: string;
+  priority: string;
   examples: string[];
 }
 
@@ -27,6 +28,7 @@ const QUADRANT_OPTIONS: QuadrantOption[] = [
     emoji: '🔥',
     color: 'bg-emerald-500',
     borderColor: 'border-emerald-500',
+    priority: 'P1',
     examples: ['Crises', 'Deadlines', 'Emergencies'],
   },
   {
@@ -36,6 +38,7 @@ const QUADRANT_OPTIONS: QuadrantOption[] = [
     emoji: '📅',
     color: 'bg-sky-500',
     borderColor: 'border-sky-500',
+    priority: 'P2',
     examples: ['Planning', 'Learning', 'Relationships'],
   },
   {
@@ -45,6 +48,7 @@ const QUADRANT_OPTIONS: QuadrantOption[] = [
     emoji: '👥',
     color: 'bg-amber-500',
     borderColor: 'border-amber-500',
+    priority: 'P3',
     examples: ['Interruptions', 'Some emails', 'Some calls'],
   },
   {
@@ -54,6 +58,7 @@ const QUADRANT_OPTIONS: QuadrantOption[] = [
     emoji: '🗑️',
     color: 'bg-slate-500',
     borderColor: 'border-slate-500',
+    priority: 'P4',
     examples: ['Time wasters', 'Busy work', 'Distractions'],
   },
 ];
@@ -100,7 +105,7 @@ export default function SmartPriorityPicker({ isOpen, onClose, onSelectQuadrant 
               Choose Priority
             </h2>
             <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-              Where does this task belong?
+              Priority level (P1-P4) will be set automatically
             </p>
           </div>
 
@@ -139,8 +144,19 @@ export default function SmartPriorityPicker({ isOpen, onClose, onSelectQuadrant 
                     minHeight: '140px',
                   }}
                 >
-                  {/* Emoji */}
-                  <div className="text-3xl mb-2">{quadrant.emoji}</div>
+                  {/* Emoji & Priority Badge */}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-3xl">{quadrant.emoji}</div>
+                    <div
+                      className="text-[10px] font-bold px-2 py-0.5 rounded"
+                      style={{
+                        background: 'var(--color-surface-muted)',
+                        color: 'var(--color-text-700)'
+                      }}
+                    >
+                      {quadrant.priority}
+                    </div>
+                  </div>
 
                   {/* Title */}
                   <div className="font-bold text-base mb-0.5" style={{ color: 'var(--color-text-900)' }}>

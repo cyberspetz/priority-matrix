@@ -10,6 +10,7 @@ import AddTaskModal from '@/components/AddTaskModal';
 import FluidBackground from '@/components/FluidBackground';
 import { getAllTasks, createTask, updateTask, deleteTask as deleteTaskFromDB, completeTask, uncompleteTask, archiveTask, getProjects, createProject, Task, TaskUpdatePayload, type TaskPriority, type Project, type ProjectLayout } from '@/lib/supabaseClient';
 import { getPriorityMeta } from '@/lib/priority';
+import { getPriorityForQuadrant, sortByPriority } from '@/lib/priorityMapping';
 
 const SidebarNav = lazy(() => import('@/components/SidebarNav'));
 const TaskListItem = lazy(() => import('@/components/TaskListItem'));
@@ -197,7 +198,18 @@ export default function Home() {
 
   const isActive = (t: Task) => t.status !== 'archived';
 
-  const todayTasks = visibleTasks.filter(t => isActive(t) && ((t.due_date && t.due_date.startsWith(todayStr)) || (t.created_at?.startsWith?.(todayStr))));
+  // Today view: Shows tasks due today OR important tasks (P1/P2)
+  // Intelligently prioritizes what you should focus on today
+  const todayTasks = sortByPriority(
+    visibleTasks.filter(t => {
+      if (!isActive(t)) return false;
+      // Include if due today or created today
+      if ((t.due_date && t.due_date.startsWith(todayStr)) || (t.created_at?.startsWith?.(todayStr))) return true;
+      // Also include P1 and P2 tasks (Important tasks should be on your radar today)
+      const priority = t.priority_level ?? 'p4';
+      return priority === 'p1' || priority === 'p2';
+    })
+  );
   const upcomingTasks = visibleTasks.filter(t => isActive(t) && t.due_date && (t.due_date >= todayStr));
 
   const counts = {
@@ -278,7 +290,10 @@ export default function Home() {
       const insertAt = Math.min(Math.max(newIndex, 0), targetIds.length);
       targetIds.splice(insertAt, 0, activeId);
       targetIds.forEach((id, idx) => queueUpdate(id, { sort_index: idx }));
-      queueUpdate(activeId, { quadrant: targetQuadrant });
+
+      // Intelligently sync priority when moving to new quadrant
+      const newPriority = getPriorityForQuadrant(targetQuadrant);
+      queueUpdate(activeId, { quadrant: targetQuadrant, priority_level: newPriority });
     }
 
     const nextTasks = currentTasks.map(task => {
@@ -336,10 +351,14 @@ export default function Home() {
     try {
       const fallbackProjectId = activeProjectId ?? projects.find(p => p.is_default)?.id ?? projects[0]?.id;
       const quadrant = preselectedQuadrant ?? 'urgent-important';
+
+      // Intelligently set priority based on quadrant
+      const priority = getPriorityForQuadrant(quadrant);
+
       const newTask = await createTask(
         title,
         quadrant,
-        undefined,
+        priority,
         dueDate,
         undefined,
         undefined,
@@ -444,6 +463,12 @@ export default function Home() {
 
   const updateTaskFields = async (id: string, updates: TaskUpdatePayload) => {
     try {
+      // Intelligently sync priority if quadrant is being changed
+      if (updates.quadrant) {
+        const newPriority = getPriorityForQuadrant(updates.quadrant);
+        updates = { ...updates, priority_level: newPriority };
+      }
+
       const updated = await updateTask(id, updates);
       syncTasks(prev => prev.map(t => t.id === id ? updated : t));
     } catch (error) {
